@@ -17,7 +17,7 @@ else:
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 creds = ServiceAccountCredentials.from_json_keyfile_dict(cred_dict, scope)
 client = gspread.authorize(creds)
-sheet = client.open_by_key("1lsuO8msQi9vXwNJq1L76fz_rTWJjtNLjecjaetdI8oY").sheet1
+sheet = client.open_by_key("1LsuO8msQi9vXwNJq1L76fz_rTWJjtNLjecjaetdI8oY").sheet1
 data = pd.DataFrame(sheet.get_all_records())
 
 st.title("🍼 Cuidados de Amelia")
