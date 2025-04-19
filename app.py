@@ -35,7 +35,7 @@ with st.form("registro"):
     tipo = st.selectbox("Tipo de evento", ["toma de leche", "puenteo", "evacuación", "vaciado", "colocación de bolsa"])
 
     cantidad_leche_oz = st.number_input("Cantidad de leche (oz)", min_value=0.0, step=0.1)
-    cantidad_leche_ml = cantidad_leche_oz * 29.5735
+    cantidad_leche_ml = (cantidad_leche_oz * 29.5735)/1000
     tipo_leche = st.selectbox("Tipo de leche", ["", "materna", "Puramino"])
     cantidad_popo_puenteada = st.number_input("Cantidad de popó puenteada (ml)", min_value=0, step=1)
 
