@@ -20,8 +20,8 @@ sheet = client.open_by_key("1LsuO8msQi9vXwNJq1L76fz_rTWJjtNLjecjaetdI8oY").sheet
 data = pd.DataFrame(sheet.get_all_records())
 if not data.empty:
     # Convertimos 'hora' a formato HH:MM para evitar errores de milisegundos
-data["hora"] = pd.to_datetime(data["hora"], errors="coerce").dt.strftime("%H:%M")
-data["fecha_hora"] = pd.to_datetime(data["fecha"] + " " + data["hora"], errors="coerce")
+    data["hora"] = pd.to_datetime(data["hora"], errors="coerce").dt.strftime("%H:%M")
+    data["fecha_hora"] = pd.to_datetime(data["fecha"] + " " + data["hora"], errors="coerce")
     data = data.dropna(subset=["fecha_hora"])
     data = data[data["fecha_hora"] <= ahora]
 
