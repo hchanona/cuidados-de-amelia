@@ -65,37 +65,32 @@ if not data.empty:
     # Leche
     leche = ultimas_24h[ultimas_24h["tipo"] == "toma de leche"]
     leche["cantidad_leche_ml"] = pd.to_numeric(leche["cantidad_leche_ml"], errors="coerce")
+    leche["tipo_leche"] = leche["tipo_leche"].astype(str).str.strip().str.lower()
+    leche = leche[leche["tipo_leche"].isin(["materna", "puramino"])]
+
     ml_24h = leche["cantidad_leche_ml"].sum()
 
     def calcular_calorias(row):
         if row["tipo_leche"] == "materna":
             return row["cantidad_leche_ml"] * 0.67
-        elif row["tipo_leche"] == "Puramino":
+        elif row["tipo_leche"] == "puramino":
             return row["cantidad_leche_ml"] * 0.72
         return 0
 
     leche["calorias"] = leche.apply(calcular_calorias, axis=1)
     calorias_24h = leche["calorias"].sum()
 
-    # Porcentaje de leche materna
-    porcentaje_materna = 0
-    total_leche_ml = leche["cantidad_leche_ml"].sum()
-    ml_materna = leche[leche["tipo_leche"] == "materna"]["cantidad_leche_ml"].sum()
-    if total_leche_ml > 0:
-        porcentaje_materna = 100 * ml_materna / total_leche_ml
-    st.metric("🧬 % Leche materna últimas 24h", f"{porcentaje_materna:.0f}%")
-
-    # Gráfico circular de tipo de leche
-    tipos_conteo = leche["tipo_leche"].value_counts()
-    if not tipos_conteo.empty:
-        st.subheader("🥛 Distribución de tipo de leche")
-        st.pyplot(tipos_conteo.plot.pie(autopct='%1.0f%%', ylabel="").figure)
+    # Gráfico circular basado en volumen
+    leche_tipo_ml = leche.groupby("tipo_leche")["cantidad_leche_ml"].sum()
+    if not leche_tipo_ml.empty:
+        st.subheader("🥛 Proporción de tipo de leche por volumen (últimas 24h, en ml)")
+        st.pyplot(leche_tipo_ml.plot.pie(autopct='%1.0f%%', ylabel="").figure)
 
     # Línea de leche por toma
     leche_diaria = leche.copy()
     leche_diaria = leche_diaria.dropna(subset=["fecha_hora", "cantidad_leche_ml"])
     leche_diaria["hora_sola"] = leche_diaria["fecha_hora"].dt.strftime("%H:%M")
-    st.subheader("📊 Leche consumida por toma (últimas 24h)")
+    st.subheader("📊 Leche consumida por toma (últimas 24h, en ml)")
     if not leche_diaria.empty:
         st.line_chart(leche_diaria.set_index("hora_sola")["cantidad_leche_ml"])
 
@@ -150,5 +145,3 @@ if not data.empty:
 
     # Descargar histórico
     st.download_button("⬇️ Descargar histórico", data.to_csv(index=False), "historico_amelia.csv", "text/csv")
-
-
