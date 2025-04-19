@@ -5,7 +5,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime, timedelta
 import json
 
-# Ajuste horario a CDMX
+# Ajuste horario manual a CDMX (UTC-6)
 ahora = datetime.utcnow() - timedelta(hours=6)
 
 # Conexión a Google Sheets
@@ -16,7 +16,7 @@ creds = ServiceAccountCredentials.from_json_keyfile_dict(cred_dict, scope)
 client = gspread.authorize(creds)
 sheet = client.open_by_key("1LsuO8msQi9vXwNJq1L76fz_rTWJjtNLjecjaetdI8oY").sheet1
 
-# Cargar base
+# Cargar registros
 data = pd.DataFrame(sheet.get_all_records())
 if not data.empty:
     data["fecha_hora"] = pd.to_datetime(data["fecha"] + " " + data["hora"], errors="coerce")
@@ -32,22 +32,10 @@ with st.form("registro"):
     hora = st.time_input("Hora", value=ahora.time())
     tipo = st.selectbox("Tipo de evento", ["toma de leche", "puenteo", "evacuación", "vaciado", "colocación de bolsa"])
 
-    # Inicializar variables
-    cantidad_leche_ml = ""
-    tipo_leche = ""
-    cantidad_popo_puenteada = ""
-    hubo_evacuacion = ""
-
-    if tipo == "toma de leche":
-        cantidad_leche_oz = st.number_input("Cantidad de leche (oz)", min_value=0.0, step=0.1)
-        cantidad_leche_ml = cantidad_leche_oz * 29.5735
-        tipo_leche = st.selectbox("Tipo de leche", ["materna", "Puramino"])
-
-    elif tipo == "puenteo":
-        cantidad_popo_puenteada = st.number_input("Cantidad de popó puenteada (ml)", min_value=0, step=1)
-
-    elif tipo == "evacuación":
-        hubo_evacuacion = "sí"
+    cantidad_leche_oz = st.number_input("Cantidad de leche (oz)", min_value=0.0, step=0.1)
+    cantidad_leche_ml = cantidad_leche_oz * 29.5735
+    tipo_leche = st.selectbox("Tipo de leche", ["", "materna", "Puramino"])
+    cantidad_popo_puenteada = st.number_input("Cantidad de popó puenteada (ml)", min_value=0, step=1)
 
     enviado = st.form_submit_button("Guardar")
 
@@ -60,10 +48,10 @@ with st.form("registro"):
                 str(fecha),
                 str(hora),
                 tipo,
-                cantidad_leche_ml if tipo == "toma de leche" else "",
-                tipo_leche if tipo == "toma de leche" else "",
-                cantidad_popo_puenteada if tipo == "puenteo" else "",
-                hubo_evacuacion if tipo == "evacuación" else ""
+                cantidad_leche_ml,
+                tipo_leche,
+                cantidad_popo_puenteada,
+                "sí" if tipo == "evacuación" else "no"
             ]
             sheet.append_row(fila)
             st.success("✅ Registro guardado correctamente.")
@@ -95,7 +83,10 @@ if not data.empty:
     puenteo_total = puenteos["cantidad_popo_puenteada"].sum()
 
     # Evacuaciones
-    evacs = ultimas_24h[(ultimas_24h["tipo"] == "evacuación") & (ultimas_24h["hubo_evacuación"] == "sí")]
+    evacs = ultimas_24h[
+        (ultimas_24h["tipo"] == "evacuación") & 
+        (ultimas_24h["hubo_evacuación"] == "sí")
+    ]
     n_evacuaciones = len(evacs)
 
     # Último vaciamiento
@@ -126,5 +117,6 @@ if not data.empty:
         m = int(tiempo_desde_cambio.total_seconds() % 3600 // 60)
         st.metric("🩹 Desde última colocación de bolsa", f"{h} h {m} min")
 
-    # Descarga de histórico
+    # Botón de descarga
     st.download_button("⬇️ Descargar histórico", data.to_csv(index=False), "historico_amelia.csv", "text/csv")
+
