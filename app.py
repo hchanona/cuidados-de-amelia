@@ -19,6 +19,8 @@ sheet = client.open_by_key("1LsuO8msQi9vXwNJq1L76fz_rTWJjtNLjecjaetdI8oY").sheet
 # Cargar registros
 data = pd.DataFrame(sheet.get_all_records())
 if not data.empty:
+    # Convertimos 'hora' a formato HH:MM para evitar errores de milisegundos
+    data["hora"] = pd.to_datetime(data["hora"], errors="coerce").dt.strftime("%H:%M")
     data["fecha_hora"] = pd.to_datetime(data["fecha"] + " " + data["hora"], errors="coerce")
     data = data.dropna(subset=["fecha_hora"])
     data = data[data["fecha_hora"] <= ahora]
@@ -55,7 +57,7 @@ with st.form("registro"):
             ]
             sheet.append_row(fila)
             st.success("✅ Registro guardado correctamente.")
-            st.experimental_rerun()
+            st.rerun()
 
 # === Estadísticas ===
 if not data.empty:
@@ -80,10 +82,10 @@ if not data.empty:
     leche["calorias"] = leche.apply(calcular_calorias, axis=1)
     calorias_24h = leche["calorias"].sum()
 
-    # Gráfico circular basado en volumen
+    # Porcentaje de leche materna por volumen
     leche_tipo_ml = leche.groupby("tipo_leche")["cantidad_leche_ml"].sum()
     if not leche_tipo_ml.empty:
-        st.subheader("🥛 Proporción de tipo de leche por volumen (últimas 24h, en ml)")
+        st.subheader("🥛 % Leche materna por volumen (últimas 24h)")
         st.pyplot(leche_tipo_ml.plot.pie(autopct='%1.0f%%', ylabel="").figure)
 
     # Línea de leche por toma
@@ -101,7 +103,7 @@ if not data.empty:
 
     # Evacuaciones
     evacs = ultimas_24h[
-        (ultimas_24h["tipo"] == "evacuación") & 
+        (ultimas_24h["tipo"] == "evacuación") &
         (ultimas_24h["hubo_evacuación"] == "sí")
     ]
     n_evacuaciones = len(evacs)
@@ -124,7 +126,7 @@ if not data.empty:
     ultima_colocacion = cambios["fecha_hora"].max()
     tiempo_desde_cambio = ahora - ultima_colocacion if pd.notna(ultima_colocacion) else None
 
-    # Métricas finales
+    # Métricas
     st.metric("🍼 Leche últimas 24h", f"{ml_24h:.0f} ml")
     st.metric("🔥 Calorías últimas 24h", f"{calorias_24h:.0f} kcal")
     st.metric("💩 Popó puenteada últimas 24h", f"{puenteo_total:.0f} ml")
@@ -135,8 +137,6 @@ if not data.empty:
         horas = int(min_desde_vaciado // 60)
         minutos = int(min_desde_vaciado % 60)
         st.metric("⏱️ Desde último vaciamiento", f"{horas} h {minutos} min")
-    elif min_desde_vaciado is not None:
-        st.warning("⚠️ El último vaciamiento está registrado en el futuro.")
 
     if tiempo_desde_cambio is not None:
         h = int(tiempo_desde_cambio.total_seconds() // 3600)
@@ -145,3 +145,4 @@ if not data.empty:
 
     # Descargar histórico
     st.download_button("⬇️ Descargar histórico", data.to_csv(index=False), "historico_amelia.csv", "text/csv")
+
