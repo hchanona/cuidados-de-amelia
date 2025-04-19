@@ -5,7 +5,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime, timedelta
 import json
 
-# Ajuste horario manual a CDMX (UTC-6)
+# Ajuste horario manual a CDMX
 ahora = datetime.utcnow() - timedelta(hours=6)
 
 # Conexión a Google Sheets
@@ -77,6 +77,28 @@ if not data.empty:
     leche["calorias"] = leche.apply(calcular_calorias, axis=1)
     calorias_24h = leche["calorias"].sum()
 
+    # Porcentaje de leche materna
+    porcentaje_materna = 0
+    total_leche_ml = leche["cantidad_leche_ml"].sum()
+    ml_materna = leche[leche["tipo_leche"] == "materna"]["cantidad_leche_ml"].sum()
+    if total_leche_ml > 0:
+        porcentaje_materna = 100 * ml_materna / total_leche_ml
+    st.metric("🧬 % Leche materna últimas 24h", f"{porcentaje_materna:.0f}%")
+
+    # Gráfico circular de tipo de leche
+    tipos_conteo = leche["tipo_leche"].value_counts()
+    if not tipos_conteo.empty:
+        st.subheader("🥛 Distribución de tipo de leche")
+        st.pyplot(tipos_conteo.plot.pie(autopct='%1.0f%%', ylabel="").figure)
+
+    # Línea de leche por toma
+    leche_diaria = leche.copy()
+    leche_diaria = leche_diaria.dropna(subset=["fecha_hora", "cantidad_leche_ml"])
+    leche_diaria["hora_sola"] = leche_diaria["fecha_hora"].dt.strftime("%H:%M")
+    st.subheader("📊 Leche consumida por toma (últimas 24h)")
+    if not leche_diaria.empty:
+        st.line_chart(leche_diaria.set_index("hora_sola")["cantidad_leche_ml"])
+
     # Puenteo
     puenteos = ultimas_24h[ultimas_24h["tipo"] == "puenteo"]
     puenteos["cantidad_popo_puenteada"] = pd.to_numeric(puenteos["cantidad_popo_puenteada"], errors="coerce")
@@ -89,20 +111,29 @@ if not data.empty:
     ]
     n_evacuaciones = len(evacs)
 
-    # Último vaciamiento
+    # Vaciado
     vaciados = data[(data["tipo"] == "vaciado") & (data["fecha_hora"] <= ahora)]
     ultimo_vaciado = vaciados["fecha_hora"].max()
     min_desde_vaciado = (ahora - ultimo_vaciado).total_seconds() // 60 if pd.notna(ultimo_vaciado) else None
+
+    # Histograma de vaciamientos por hora
+    vaciados_horas = vaciados.copy()
+    vaciados_horas = vaciados_horas.dropna(subset=["fecha_hora"])
+    vaciados_horas["hora"] = vaciados_horas["fecha_hora"].dt.hour
+    st.subheader("🕒 Distribución de vaciamientos por hora")
+    if not vaciados_horas.empty:
+        st.bar_chart(vaciados_horas["hora"].value_counts().sort_index())
 
     # Última colocación de bolsa
     cambios = data[(data["tipo"] == "colocación de bolsa") & (data["fecha_hora"] <= ahora)]
     ultima_colocacion = cambios["fecha_hora"].max()
     tiempo_desde_cambio = ahora - ultima_colocacion if pd.notna(ultima_colocacion) else None
 
-    # Mostrar métricas
+    # Métricas finales
     st.metric("🍼 Leche últimas 24h", f"{ml_24h:.0f} ml")
     st.metric("🔥 Calorías últimas 24h", f"{calorias_24h:.0f} kcal")
     st.metric("💩 Popó puenteada últimas 24h", f"{puenteo_total:.0f} ml")
+    st.metric("🔁 Número de puenteos últimas 24h", f"{len(puenteos)} veces")
     st.metric("🚼 Evacuaciones últimas 24h", f"{n_evacuaciones} veces")
 
     if min_desde_vaciado is not None and min_desde_vaciado >= 0:
@@ -117,6 +148,7 @@ if not data.empty:
         m = int(tiempo_desde_cambio.total_seconds() % 3600 // 60)
         st.metric("🩹 Desde última colocación de bolsa", f"{h} h {m} min")
 
-    # Botón de descarga
+    # Descargar histórico
     st.download_button("⬇️ Descargar histórico", data.to_csv(index=False), "historico_amelia.csv", "text/csv")
+
 
