@@ -77,6 +77,16 @@ if not data.empty:
     leche = leche[leche["tipo_leche"].isin(["materna", "puramino"])]
 
     ml_24h = leche["cantidad_leche_ml"].sum()
+    # ⏱️ Tiempo desde la última toma de leche
+    if not leche.empty:
+        ultima_toma = leche.sort_values("fecha_hora", ascending=False).iloc[0]
+        minutos_desde_ultima = (ahora - ultima_toma["fecha_hora"]).total_seconds() / 60
+        if minutos_desde_ultima >= 0:
+            h = int(minutos_desde_ultima // 60)
+            m = int(minutos_desde_ultima % 60)
+            st.metric("⏱️ Desde última toma de leche", f"{h} h {m} min")
+        else:
+            st.warning("⚠️ La última toma de leche está registrada en el futuro.")
 
     def calcular_calorias(row):
         if row["tipo_leche"] == "materna":
