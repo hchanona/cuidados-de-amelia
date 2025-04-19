@@ -35,7 +35,7 @@ with st.form("registro"):
     tipo = st.selectbox("Tipo de evento", ["toma de leche", "puenteo", "evacuación", "vaciado", "colocación de bolsa"])
 
     cantidad_leche_oz = st.number_input("Cantidad de leche (oz)", min_value=0.0, step=0.1)
-    cantidad_leche_ml = (cantidad_leche_oz * 29.5735)/1000
+    cantidad_leche_ml = (cantidad_leche_oz * 29.5735)
     tipo_leche = st.selectbox("Tipo de leche", ["", "materna", "Puramino"])
     cantidad_popo_puenteada = st.number_input("Cantidad de popó puenteada (ml)", min_value=0, step=1)
 
@@ -63,6 +63,12 @@ with st.form("registro"):
 if not data.empty:
     st.subheader("📊 Estadísticas en tiempo real")
     ultimas_24h = data[data["fecha_hora"] > ahora - timedelta(hours=24)]
+    
+    # 🔧 Limpieza de decimales: comas por puntos
+    data["cantidad_leche_ml"] = data["cantidad_leche_ml"].astype(str).str.replace(",", ".")
+    data["cantidad_popo_puenteada"] = data["cantidad_popo_puenteada"].astype(str).str.replace(",", ".")
+    data["cantidad_leche_ml"] = pd.to_numeric(data["cantidad_leche_ml"], errors="coerce")
+    data["cantidad_popo_puenteada"] = pd.to_numeric(data["cantidad_popo_puenteada"], errors="coerce")
 
     # Leche
     leche = ultimas_24h[ultimas_24h["tipo"] == "toma de leche"]
