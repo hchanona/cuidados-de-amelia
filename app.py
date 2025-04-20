@@ -16,9 +16,8 @@ creds = ServiceAccountCredentials.from_json_keyfile_dict(cred_dict, scope)
 client = gspread.authorize(creds)
 sheet = client.open_by_key("1LsuO8msQi9vXwNJq1L76fz_rTWJjtNLjecjaetdI8oY").sheet1
 
-# Cargar registros
 data = pd.DataFrame(sheet.get_all_records())
-data.columns = data.columns.str.strip()  # Elimina espacios ocultos
+data.columns = data.columns.str.strip()
 
 if not data.empty:
     data["hora"] = pd.to_datetime(data["hora"], errors="coerce").dt.strftime("%H:%M")
@@ -62,148 +61,137 @@ with st.form("registro"):
             st.success("✅ Registro guardado correctamente.")
             st.rerun()
 
-# === Estadísticas ===
-if not data.empty:
-    st.subheader("📊 Estadísticas en tiempo real")
-    hoy = ahora.date()
-    data["fecha"] = pd.to_datetime(data["fecha"], errors="coerce").dt.date
-    datos_hoy = data[data["fecha"] == hoy]
+# === Procesamiento de datos ===
 
-    # Limpieza
-    data["cantidad_leche_ml"] = data["cantidad_leche_ml"].astype(str).str.replace(",", ".")
-    data["cantidad_popo_puenteada"] = data["cantidad_popo_puenteada"].astype(str).str.replace(",", ".")
-    data["cantidad_extraida_de_leche"] = data["cantidad_extraida_de_leche"].astype(str).str.replace(",", ".")
+hoy = ahora.date()
+data["fecha"] = pd.to_datetime(data["fecha"], errors="coerce").dt.date
+datos_hoy = data[data["fecha"] == hoy]
 
-    data["cantidad_leche_ml"] = pd.to_numeric(data["cantidad_leche_ml"], errors="coerce")
-    data["cantidad_popo_puenteada"] = pd.to_numeric(data["cantidad_popo_puenteada"], errors="coerce")
-    data["cantidad_extraida_de_leche"] = pd.to_numeric(data["cantidad_extraida_de_leche"], errors="coerce")
+# Limpieza y conversión
+data["cantidad_leche_ml"] = data["cantidad_leche_ml"].astype(str).str.replace(",", ".")
+data["cantidad_popo_puenteada"] = data["cantidad_popo_puenteada"].astype(str).str.replace(",", ".")
+data["cantidad_extraida_de_leche"] = data["cantidad_extraida_de_leche"].astype(str).str.replace(",", ".")
 
-    leche = datos_hoy[datos_hoy["tipo"] == "toma de leche"]
-    leche["cantidad_leche_ml"] = pd.to_numeric(leche["cantidad_leche_ml"], errors="coerce")
-    leche["tipo_leche"] = leche["tipo_leche"].astype(str).str.strip().str.lower()
-    leche = leche[leche["tipo_leche"].isin(["materna", "puramino"])]
+data["cantidad_leche_ml"] = pd.to_numeric(data["cantidad_leche_ml"], errors="coerce")
+data["cantidad_popo_puenteada"] = pd.to_numeric(data["cantidad_popo_puenteada"], errors="coerce")
+data["cantidad_extraida_de_leche"] = pd.to_numeric(data["cantidad_extraida_de_leche"], errors="coerce")
 
-    ml_24h = leche["cantidad_leche_ml"].sum()
+# Leche hoy
+leche = datos_hoy[datos_hoy["tipo"] == "toma de leche"]
+leche["cantidad_leche_ml"] = pd.to_numeric(leche["cantidad_leche_ml"], errors="coerce")
+leche["tipo_leche"] = leche["tipo_leche"].astype(str).str.strip().str.lower()
+leche = leche[leche["tipo_leche"].isin(["materna", "puramino"])]
+ml_24h = leche["cantidad_leche_ml"].sum()
 
-    if not leche.empty:
-        ultima_toma = leche.sort_values("fecha_hora", ascending=False).iloc[0]
-        minutos_desde_ultima = (ahora - ultima_toma["fecha_hora"]).total_seconds() / 60
-        if minutos_desde_ultima >= 0:
-            h = int(minutos_desde_ultima // 60)
-            m = int(minutos_desde_ultima % 60)
-            st.metric("⏱️ Desde última toma de leche", f"{h} h {m} min")
-        else:
-            st.warning("⚠️ La última toma de leche está registrada en el futuro.")
+# Calorías
+def calcular_calorias(row):
+    if row["tipo_leche"] == "materna":
+        return row["cantidad_leche_ml"] * 0.67
+    elif row["tipo_leche"] == "puramino":
+        return row["cantidad_leche_ml"] * 0.72
+    return 0
 
-    def calcular_calorias(row):
-        if row["tipo_leche"] == "materna":
-            return row["cantidad_leche_ml"] * 0.67
-        elif row["tipo_leche"] == "puramino":
-            return row["cantidad_leche_ml"] * 0.72
-        return 0
+leche["calorias"] = leche.apply(calcular_calorias, axis=1)
+calorias_24h = leche["calorias"].sum()
 
-    leche["calorias"] = leche.apply(calcular_calorias, axis=1)
-    calorias_24h = leche["calorias"].sum()
+# Consumo acumulado de leche hoy
+leche_diaria = leche.dropna(subset=["fecha_hora", "cantidad_leche_ml"]).sort_values("fecha_hora")
+leche_diaria["hora"] = leche_diaria["fecha_hora"].dt.strftime("%H:%M")
+leche_diaria["acumulado"] = leche_diaria["cantidad_leche_ml"].cumsum()
 
-    leche_tipo_ml = leche.groupby("tipo_leche")["cantidad_leche_ml"].sum()
-    if not leche_tipo_ml.empty:
-        st.subheader("🥛 Proporción de tipo de leche por volumen (hoy, en ml)")
-        st.pyplot(leche_tipo_ml.plot.pie(autopct='%1.0f%%', ylabel="").figure)
+# Promedio histórico
+tomas_pasadas = data[
+    (data["tipo"] == "toma de leche") &
+    (data["tipo_leche"].isin(["materna", "puramino"])) &
+    (data["fecha"] < hoy)
+]
+tomas_pasadas["cantidad_leche_ml"] = pd.to_numeric(tomas_pasadas["cantidad_leche_ml"], errors="coerce")
+promedio_historico = tomas_pasadas.groupby("fecha")["cantidad_leche_ml"].sum().mean()
 
-    leche_diaria = leche.copy().dropna(subset=["fecha_hora", "cantidad_leche_ml"])
-    leche_diaria = leche_diaria.sort_values("fecha_hora")
-    leche_diaria["hora"] = leche_diaria["fecha_hora"].dt.strftime("%H:%M")
-    leche_diaria["acumulado"] = leche_diaria["cantidad_leche_ml"].cumsum()
+# Otros eventos
+puenteos = datos_hoy[datos_hoy["tipo"] == "puenteo"]
+puenteos["cantidad_popo_puenteada"] = pd.to_numeric(puenteos["cantidad_popo_puenteada"], errors="coerce")
+puenteo_total = puenteos["cantidad_popo_puenteada"].sum()
 
-    tomas_pasadas = data[
-        (data["tipo"] == "toma de leche") &
-        (data["tipo_leche"].isin(["materna", "puramino"])) &
-        (data["fecha"] < hoy)
-    ]
-    tomas_pasadas["cantidad_leche_ml"] = pd.to_numeric(tomas_pasadas["cantidad_leche_ml"], errors="coerce")
-    promedio_historico = tomas_pasadas.groupby("fecha")["cantidad_leche_ml"].sum().mean()
+evacs = datos_hoy[(datos_hoy["tipo"] == "evacuación") & (datos_hoy["hubo_evacuación"] == "sí")]
+n_evacuaciones = len(evacs)
 
-    st.subheader("📈 Consumo acumulado de leche hoy")
-    if not leche_diaria.empty:
-        import matplotlib.pyplot as plt
-        fig, ax = plt.subplots()
-        ax.plot(leche_diaria["hora"], leche_diaria["acumulado"], marker='o', label="Hoy")
-        ax.axhline(promedio_historico, color='red', linestyle='--', label="Promedio histórico")
-        ax.set_xlabel("Hora del día")
-        ax.set_ylabel("Consumo acumulado (ml)")
-        ax.set_title("Leche acumulada vs promedio histórico")
-        ax.legend()
-        plt.xticks(rotation=45)
-        st.pyplot(fig)
+extracciones = datos_hoy[datos_hoy["tipo"] == "extracción de leche"]
+ultima_extraccion = extracciones["fecha_hora"].max()
+tiempo_desde_extraccion = ahora - ultima_extraccion if pd.notna(ultima_extraccion) else None
 
-    puenteos = datos_hoy[datos_hoy["tipo"] == "puenteo"]
-    puenteos["cantidad_popo_puenteada"] = pd.to_numeric(puenteos["cantidad_popo_puenteada"], errors="coerce")
-    puenteo_total = puenteos["cantidad_popo_puenteada"].sum()
+vaciados = data[(data["tipo"] == "vaciado") & (data["fecha_hora"] <= ahora)]
+ultimo_vaciado = vaciados["fecha_hora"].max()
+min_desde_vaciado = (ahora - ultimo_vaciado).total_seconds() // 60 if pd.notna(ultimo_vaciado) else None
 
-    evacs = datos_hoy[
-        (datos_hoy["tipo"] == "evacuación") & 
-        (datos_hoy["hubo_evacuación"] == "sí")
-    ]
-    n_evacuaciones = len(evacs)
+cambios = data[(data["tipo"] == "colocación de bolsa") & (data["fecha_hora"] <= ahora)]
+ultima_colocacion = cambios["fecha_hora"].max()
+tiempo_desde_cambio = ahora - ultima_colocacion if pd.notna(ultima_colocacion) else None
 
-    extracciones = datos_hoy[datos_hoy["tipo"] == "extracción de leche"]
-    ultima_extraccion = extracciones["fecha_hora"].max()
-    tiempo_desde_extraccion = ahora - ultima_extraccion if pd.notna(ultima_extraccion) else None
+# === Estadísticas finales ===
 
-    vaciados = data[(data["tipo"] == "vaciado") & (data["fecha_hora"] <= ahora)]
-    ultimo_vaciado = vaciados["fecha_hora"].max()
-    min_desde_vaciado = (ahora - ultimo_vaciado).total_seconds() // 60 if pd.notna(ultimo_vaciado) else None
+st.metric("🍼 Leche hoy", f"{ml_24h:.0f} ml")
+st.metric("🔥 Calorías hoy", f"{calorias_24h:.0f} kcal")
+st.metric("💩 Popó puenteada hoy", f"{puenteo_total:.0f} ml")
+st.metric("🔁 Número de puenteos hoy", f"{len(puenteos)} veces")
+st.metric("🚼 Evacuaciones hoy", f"{n_evacuaciones} veces")
 
-    cambios = data[(data["tipo"] == "colocación de bolsa") & (data["fecha_hora"] <= ahora)]
-    ultima_colocacion = cambios["fecha_hora"].max()
-    tiempo_desde_cambio = ahora - ultima_colocacion if pd.notna(ultima_colocacion) else None
+if tiempo_desde_extraccion is not None:
+    h = int(tiempo_desde_extraccion.total_seconds() // 3600)
+    m = int(tiempo_desde_extraccion.total_seconds() % 3600 // 60)
+    st.metric("🕓 Desde última extracción", f"{h} h {m} min")
+else:
+    st.info("🕓 Hoy no se ha extraído leche")
 
-    st.metric("🍼 Leche hoy", f"{ml_24h:.0f} ml")
-    st.metric("🔥 Calorías hoy", f"{calorias_24h:.0f} kcal")
-    st.metric("💩 Popó puenteada hoy", f"{puenteo_total:.0f} ml")
-    st.metric("🔁 Número de puenteos hoy", f"{len(puenteos)} veces")
-    st.metric("🚼 Evacuaciones hoy", f"{n_evacuaciones} veces")
+if min_desde_vaciado is not None and min_desde_vaciado >= 0:
+    horas = int(min_desde_vaciado // 60)
+    minutos = int(min_desde_vaciado % 60)
+    st.metric("⏱️ Desde último vaciamiento", f"{horas} h {minutos} min")
+elif min_desde_vaciado is not None:
+    st.warning("⚠️ El último vaciamiento está registrado en el futuro.")
 
-    if tiempo_desde_extraccion is not None:
-        h = int(tiempo_desde_extraccion.total_seconds() // 3600)
-        m = int(tiempo_desde_extraccion.total_seconds() % 3600 // 60)
-        st.metric("🕓 Desde última extracción", f"{h} h {m} min")
-    else:
-        st.info("🕓 Hoy no se ha extraído leche")
+if tiempo_desde_cambio is not None:
+    h = int(tiempo_desde_cambio.total_seconds() // 3600)
+    m = int(tiempo_desde_cambio.total_seconds() % 3600 // 60)
+    st.metric("🩹 Desde última colocación de bolsa", f"{h} h {m} min")
 
-    if min_desde_vaciado is not None and min_desde_vaciado >= 0:
-        horas = int(min_desde_vaciado // 60)
-        minutos = int(min_desde_vaciado % 60)
-        st.metric("⏱️ Desde último vaciamiento", f"{horas} h {minutos} min")
-    elif min_desde_vaciado is not None:
-        st.warning("⚠️ El último vaciamiento está registrado en el futuro.")
+st.download_button("⬇️ Descargar histórico", data.to_csv(index=False), "historico_amelia.csv", "text/csv")
 
-    if tiempo_desde_cambio is not None:
-        h = int(tiempo_desde_cambio.total_seconds() // 3600)
-        m = int(tiempo_desde_cambio.total_seconds() % 3600 // 60)
-        st.metric("🩹 Desde última colocación de bolsa", f"{h} h {m} min")
+# === Gráficos ===
 
-    st.subheader("📆 Calorías diarias totales")
-    historico_leche = data[(data["tipo"] == "toma de leche") & data["tipo_leche"].isin(["materna", "puramino"])]
-    historico_leche["cantidad_leche_ml"] = pd.to_numeric(historico_leche["cantidad_leche_ml"], errors="coerce")
+st.subheader("📈 Consumo acumulado de leche hoy")
+if not leche_diaria.empty:
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots()
+    ax.plot(leche_diaria["hora"], leche_diaria["acumulado"], marker='o', label="Hoy")
+    ax.axhline(promedio_historico, color='red', linestyle='--', label="Promedio histórico")
+    ax.set_xlabel("Hora del día")
+    ax.set_ylabel("Consumo acumulado (ml)")
+    ax.set_title("Leche acumulada vs promedio histórico")
+    ax.legend()
+    plt.xticks(rotation=45)
+    st.pyplot(fig)
 
-    def calcular_calorias_historico(row):
-        if row["tipo_leche"] == "materna":
-            return row["cantidad_leche_ml"] * 0.67
-        elif row["tipo_leche"] == "puramino":
-            return row["cantidad_leche_ml"] * 0.72
-        return 0
+st.subheader("📆 Calorías diarias totales")
+historico_leche = data[(data["tipo"] == "toma de leche") & data["tipo_leche"].isin(["materna", "puramino"])]
+historico_leche["cantidad_leche_ml"] = pd.to_numeric(historico_leche["cantidad_leche_ml"], errors="coerce")
 
-    historico_leche["calorias"] = historico_leche.apply(calcular_calorias_historico, axis=1)
-    calorias_por_dia = historico_leche.groupby("fecha")["calorias"].sum().sort_index()
+def calcular_calorias_historico(row):
+    if row["tipo_leche"] == "materna":
+        return row["cantidad_leche_ml"] * 0.67
+    elif row["tipo_leche"] == "puramino":
+        return row["cantidad_leche_ml"] * 0.72
+    return 0
 
-    if not calorias_por_dia.empty:
-        fig, ax = plt.subplots()
-        ax.plot(calorias_por_dia.index, calorias_por_dia.values, marker='o', linestyle='-')
-        ax.set_xlabel("Fecha")
-        ax.set_ylabel("Calorías totales")
-        ax.set_title("Consumo diario de calorías")
-        plt.xticks(rotation=45)
-        st.pyplot(fig)
+historico_leche["calorias"] = historico_leche.apply(calcular_calorias_historico, axis=1)
+calorias_por_dia = historico_leche.groupby("fecha")["calorias"].sum().sort_index()
+calorias_por_dia.index = calorias_por_dia.index.astype(str)
 
-    st.download_button("⬇️ Descargar histórico", data.to_csv(index=False), "historico_amelia.csv", "text/csv")
+if not calorias_por_dia.empty:
+    fig, ax = plt.subplots()
+    ax.plot(calorias_por_dia.index, calorias_por_dia.values, marker='o', linestyle='-')
+    ax.set_xlabel("Fecha")
+    ax.set_ylabel("Calorías totales")
+    ax.set_title("Consumo diario de calorías")
+    plt.xticks(rotation=45)
+    st.pyplot(fig)
