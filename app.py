@@ -25,6 +25,7 @@ if not data.empty:
     data = data.dropna(subset=["fecha_hora"])
     data = data[data["fecha_hora"] <= ahora]
 
+st.image("foto_amor.jpeg", caption="Nuestro corazón hermoso 💕", use_column_width=True)
 st.title("🍼 Cuidados de Amelia")
 
 with st.form("registro"):
