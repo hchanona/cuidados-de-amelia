@@ -18,6 +18,8 @@ sheet = client.open_by_key("1LsuO8msQi9vXwNJq1L76fz_rTWJjtNLjecjaetdI8oY").sheet
 
 # Cargar registros
 data = pd.DataFrame(sheet.get_all_records())
+data.columns = data.columns.str.strip()  # Elimina espacios ocultos
+
 if not data.empty:
     data["hora"] = pd.to_datetime(data["hora"], errors="coerce").dt.strftime("%H:%M")
     data["fecha_hora"] = pd.to_datetime(data["fecha"] + " " + data["hora"], errors="coerce")
