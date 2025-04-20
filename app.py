@@ -82,6 +82,8 @@ leche["cantidad_leche_ml"] = pd.to_numeric(leche["cantidad_leche_ml"], errors="c
 leche["tipo_leche"] = leche["tipo_leche"].astype(str).str.strip().str.lower()
 leche = leche[leche["tipo_leche"].isin(["materna", "puramino"])]
 ml_24h = leche["cantidad_leche_ml"].sum()
+ml_materna = leche[leche["tipo_leche"] == "materna"]["cantidad_leche_ml"].sum()
+porcentaje_materna = (ml_materna / ml_24h * 100) if ml_24h > 0 else 0
 
 # Calorías
 def calcular_calorias(row):
@@ -131,6 +133,7 @@ tiempo_desde_cambio = ahora - ultima_colocacion if pd.notna(ultima_colocacion) e
 # === Estadísticas finales ===
 
 st.metric("🍼 Leche hoy", f"{ml_24h:.0f} ml")
+st.metric("🥛 % leche materna hoy", f"{porcentaje_materna:.0f}%")
 st.metric("🔥 Calorías hoy", f"{calorias_24h:.0f} kcal")
 st.metric("💩 Popó puenteada hoy", f"{puenteo_total:.0f} ml")
 st.metric("🔁 Número de puenteos hoy", f"{len(puenteos)} veces")
