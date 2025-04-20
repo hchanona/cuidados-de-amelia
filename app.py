@@ -70,11 +70,11 @@ if not data.empty:
     # Limpieza
     data["cantidad_leche_ml"] = data["cantidad_leche_ml"].astype(str).str.replace(",", ".")
     data["cantidad_popo_puenteada"] = data["cantidad_popo_puenteada"].astype(str).str.replace(",", ".")
-    data["cantidad_extraída_de_leche"] = data["cantidad_extraída_de_leche"].astype(str).str.replace(",", ".")
+    data["cantidad_extraida_de_leche"] = data["cantidad_extraida_de_leche"].astype(str).str.replace(",", ".")
 
     data["cantidad_leche_ml"] = pd.to_numeric(data["cantidad_leche_ml"], errors="coerce")
     data["cantidad_popo_puenteada"] = pd.to_numeric(data["cantidad_popo_puenteada"], errors="coerce")
-    data["cantidad_extraída_de_leche"] = pd.to_numeric(data["cantidad_extraída_de_leche"], errors="coerce")
+    data["cantidad_extraida_de_leche"] = pd.to_numeric(data["cantidad_extraida_de_leche"], errors="coerce")
 
     leche = datos_hoy[datos_hoy["tipo"] == "toma de leche"]
     leche["cantidad_leche_ml"] = pd.to_numeric(leche["cantidad_leche_ml"], errors="coerce")
