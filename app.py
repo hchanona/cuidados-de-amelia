@@ -27,13 +27,8 @@ if not data.empty:
 
 st.title("🍼 Cuidados de Amelia")
 st.image("foto_amor.jpeg", caption="Amelia 💖", use_container_width=True)
-st.markdown(
-    "<div style='text-align: center'>"
-    "<img src='foto_amelia.png' width='300'><br>"
-    "<em>Nuestro corazón hermoso 💖</em>"
-    "</div>",
-    unsafe_allow_html=True
-)
+st.markdown("<div style='text-align: center'><em>Nuestro corazón hermoso 💖</em></div>", unsafe_allow_html=True)
+
 
 with st.form("registro"):
     fecha = st.date_input("Fecha", value=ahora.date())
