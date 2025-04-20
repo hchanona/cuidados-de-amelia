@@ -90,13 +90,15 @@ porcentaje_materna = (ml_materna / ml_24h * 100) if ml_24h > 0 else 0
 
 if not leche.empty:
     ultima_toma = leche.sort_values("fecha_hora", ascending=False).iloc[0]
-    minutos_desde_ultima = (ahora - ultima_toma["fecha_hora"]).total_seconds() / 60
-    if minutos_desde_ultima >= 0:
-        h = int(minutos_desde_ultima // 60)
-        m = int(minutos_desde_ultima % 60)
-        st.metric("⏱️ Desde última toma de leche", f"{h} h {m} min")
+    minutos_desde_ultima_toma = (ahora - ultima_toma["fecha_hora"]).total_seconds() / 60
+    if minutos_desde_ultima_toma >= 0:
+        h_ultima_toma = int(minutos_desde_ultima_toma // 60)
+        m_ultima_toma = int(minutos_desde_ultima_toma % 60)
+        texto_ultima_toma = f"{h_ultima_toma} h {m_ultima_toma} min"
     else:
-        st.warning("⚠️ La última toma está registrada en el futuro.")
+        texto_ultima_toma = "⚠️ Registro futuro"
+else:
+    texto_ultima_toma = "No registrada"
 
 # Calorías
 def calcular_calorias(row):
