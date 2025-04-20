@@ -26,7 +26,7 @@ if not data.empty:
     data = data[data["fecha_hora"] <= ahora]
 
 st.title("🍼 Cuidados de Amelia")
-st.image("foto_amelia.png", caption="Amelia 💖", use_container_width=True)
+st.image("foto_amelia.jpeg", caption="Amelia 💖", use_container_width=True)
 st.markdown(
     "<div style='text-align: center'>"
     "<img src='foto_amelia.png' width='300'><br>"
