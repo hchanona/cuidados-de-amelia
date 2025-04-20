@@ -88,6 +88,16 @@ ml_24h = leche["cantidad_leche_ml"].sum()
 ml_materna = leche[leche["tipo_leche"] == "materna"]["cantidad_leche_ml"].sum()
 porcentaje_materna = (ml_materna / ml_24h * 100) if ml_24h > 0 else 0
 
+if not leche.empty:
+    ultima_toma = leche.sort_values("fecha_hora", ascending=False).iloc[0]
+    minutos_desde_ultima = (ahora - ultima_toma["fecha_hora"]).total_seconds() / 60
+    if minutos_desde_ultima >= 0:
+        h = int(minutos_desde_ultima // 60)
+        m = int(minutos_desde_ultima % 60)
+        st.metric("⏱️ Desde última toma de leche", f"{h} h {m} min")
+    else:
+        st.warning("⚠️ La última toma está registrada en el futuro.")
+
 # Calorías
 def calcular_calorias(row):
     if row["tipo_leche"] == "materna":
@@ -135,6 +145,7 @@ tiempo_desde_cambio = ahora - ultima_colocacion if pd.notna(ultima_colocacion) e
 
 # === Estadísticas finales ===
 
+st.metric("⏱️ Desde última toma de leche", texto_ultima_toma)
 st.metric("🍼 Leche hoy", f"{ml_24h:.0f} ml")
 st.metric("🥛 % leche materna hoy", f"{porcentaje_materna:.0f}%")
 st.metric("🔥 Calorías hoy", f"{calorias_24h:.0f} kcal")
