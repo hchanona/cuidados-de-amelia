@@ -25,8 +25,8 @@ if not data.empty:
     data = data.dropna(subset=["fecha_hora"])
     data = data[data["fecha_hora"] <= ahora]
 
-st.image("foto_amor.jpeg", caption="Nuestro corazón hermoso 💕", use_column_width=True)
 st.title("🍼 Cuidados de Amelia")
+st.image("foto_amelia.png", caption="Amelia 💖", use_container_width=True)
 st.markdown(
     "<div style='text-align: center'>"
     "<img src='foto_amelia.png' width='300'><br>"
