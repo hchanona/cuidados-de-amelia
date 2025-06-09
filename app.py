@@ -305,7 +305,7 @@ if not media_movil.empty:
     fig, ax = plt.subplots(figsize=(12,6))
     fig.patch.set_facecolor('#fff8f8')
     ax.set_facecolor('#fff8f8')
-    ax.plot(media_movil.index, media_movil.values, linestyle='-', linewidth=2, color='#c8a2c8')
+    ax.plot(media_movil.index, media_movil.values, linestyle='-', linewidth=3, color='#c8a2c8')
     ax.set_ylim(0, media_movil.max() * 1.10)
     
     # Formato de fechas en X
@@ -334,7 +334,7 @@ if not extraccion_media_movil.empty:
     fig2, ax2 = plt.subplots(figsize=(12,6))
     fig2.patch.set_facecolor('#fff8f8')
     ax2.set_facecolor('#fff8f8')
-    ax2.plot(extraccion_media_movil.index, extraccion_media_movil.values, linestyle='-', linewidth=2, color='#f4c2c2')
+    ax2.plot(extraccion_media_movil.index, extraccion_media_movil.values, linestyle='-', linewidth=3, color='#f4c2c2')
     ax2.set_ylim(0, 220)
     ax2.xaxis.set_major_locator(mdates.AutoDateLocator())
     ax2.xaxis.set_major_formatter(mdates.DateFormatter('%d-%b'))
@@ -369,7 +369,7 @@ if not porcentaje_materna_media_movil.empty:
     fig3, ax3 = plt.subplots(figsize=(12,6))
     fig3.patch.set_facecolor('#fff8f8')
     ax3.set_facecolor('#fff8f8')
-    ax3.plot(porcentaje_materna_media_movil.index, porcentaje_materna_media_movil.values, linestyle='-', linewidth=2, color='#e3a6b4')
+    ax3.plot(porcentaje_materna_media_movil.index, porcentaje_materna_media_movil.values, linestyle='-', linewidth=3, color='#e3a6b4')
     ax3.set_ylim(0, 100)
     ax3.xaxis.set_major_locator(mdates.AutoDateLocator())
     ax3.xaxis.set_major_formatter(mdates.DateFormatter('%d-%b'))
