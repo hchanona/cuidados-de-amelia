@@ -38,9 +38,7 @@ foto_elegida = random.choice(fotos_amelia)
 
 st.title("Registro de cuidados de Amelia")
 st.image(foto_elegida, use_container_width=True)
-st.markdown("<div style='text-align: center'><em>Por ella, que sonríe, y en cuya alegría encontramos fuerza para seguir.
-
- </em></div>", unsafe_allow_html=True)
+st.markdown("<div style='text-align: center'><em>Por ella, que sonríe, y en cuya alegría encontramos fuerza para seguir.</em></div>", unsafe_allow_html=True)
 
 st.markdown(
     """
