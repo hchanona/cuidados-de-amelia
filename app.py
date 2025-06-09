@@ -272,6 +272,9 @@ if tiempo_desde_cambio is not None:
     st.metric("Tiempo desde último cambio de bolsa", f"{h} h {m} min")
 
 
+
+st.caption("Todas las gráficas a continuación presentan valores suavizados con media móvil de 7 días, para facilitar el seguimiento de tendencias.")
+
 # === Gráfico: Tendencia de consumo de calorías ===
 
 # Normalizamos primero los campos relevantes
@@ -292,11 +295,11 @@ historico_leche["calorias"] = historico_leche.apply(lambda row:
 # Agrupamos por fecha
 calorias_por_dia = historico_leche.groupby("fecha")["calorias"].sum().sort_index()
 
-# Calculamos media móvil de 10 días (puedes ajustar el window si quieres)
+# Calculamos media móvil de 7 días (puedes ajustar el window si quieres)
 media_movil = calorias_por_dia.rolling(window=7, min_periods=7).mean()
 
 # Gráfico
-st.subheader("Calorías diarias: media móvil de 7 días (kcal)")
+st.subheader("Calorías diarias (kcal)")
 
 if not media_movil.empty:
     import matplotlib.pyplot as plt
@@ -315,9 +318,9 @@ if not media_movil.empty:
     
     st.pyplot(fig)
 
-# === Gráfico: Media móvil de 14 días de extracción de leche ===
+# === Gráfico: Media móvil de 7 días de extracción de leche ===
 
-st.subheader("Extracción de leche: media móvil de 7 días (ml)")
+st.subheader("Extracción de leche (ml)")
 
 # Filtramos las extracciones válidas
 historico_extraccion = data[data["tipo"] == "extracción de leche"].copy()
@@ -345,7 +348,7 @@ else:
 
 # === Gráfico: Media móvil de 7 días del porcentaje de leche materna ===
 
-st.subheader("Porcentaje de leche materna: media móvil de 7 días")
+st.subheader("Porcentaje de leche materna")
 
 # Filtramos tomas válidas
 historico_tomas = data[data["tipo"] == "toma de leche"].copy()
