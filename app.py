@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import random
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime, timedelta
@@ -25,9 +26,21 @@ if not data.empty:
     data = data.dropna(subset=["fecha_hora"])
     data = data[data["fecha_hora"] <= ahora]
 
+fotos_amelia = [
+    "foto_amor1.jpg",
+    "foto_amor2.jpg",
+    "foto_amor3.jpg",
+    "foto_amor4.jpg",
+    "foto_amor5.jpg"
+]
+
+foto_elegida = random.choice(fotos_amelia)
+
 st.title("Registro de cuidados de Amelia")
-st.image("foto_amor.jpg", use_container_width=True)
-st.markdown("<div style='text-align: center'><em>Para cuidar un poco mejor a una hermosa bebé que ha luchado tanto </em></div>", unsafe_allow_html=True)
+st.image(foto_elegida, use_container_width=True)
+st.markdown("<div style='text-align: center'><em>Por ella, que sonríe, y en cuya alegría encontramos fuerza para seguir.
+
+ </em></div>", unsafe_allow_html=True)
 
 st.markdown(
     """
