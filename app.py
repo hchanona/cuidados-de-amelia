@@ -14,14 +14,14 @@ from oauth2client.service_account import ServiceAccountCredentials # Para la aut
 
 # 2. === DEFINICIÓN DE FUNCIONES ===
 
-def calcular_calorias(row):
-    """Devuelve las calorías correspondientes a la cantidad y tipo de leche de una fila."""
-    if row["tipo_leche"] == "materna":
-        return row["cantidad_leche_ml"] * 0.67
-    elif row["tipo_leche"] == "puramino":
-        return row["cantidad_leche_ml"] * 0.72
-    elif row["tipo_leche"] == "nutramigen":
-        return row["cantidad_leche_ml"] * 0.67
+def calcular_calorias(registro):
+    """Devuelve las calorías correspondientes a la cantidad y tipo de leche de una registro."""
+    if registro["tipo_leche"] == "materna":
+        return registro["cantidad_leche_ml"] * 0.67
+    elif registro["tipo_leche"] == "puramino":
+        return registro["cantidad_leche_ml"] * 0.72
+    elif registro["tipo_leche"] == "nutramigen":
+        return registro["cantidad_leche_ml"] * 0.67
     return 0
 
 def calcular_porcentaje_materna(grupo):
@@ -183,11 +183,7 @@ elif tipo == "seno materno":
 # Creo un botón para guardar los registros
 if st.button("Guardar"):
     fecha_hora_reg = datetime.combine(fecha, hora)
-    if fecha_hora_reg > ahora:
-        st.error("La fecha y hora no pueden estar en el futuro.")
-    else:
-        fila = [
-            str(fecha),
+    fila = [str(fecha),
             str(hora),
             tipo,
             cantidad_leche_ml,
@@ -197,8 +193,8 @@ if st.button("Guardar"):
             cantidad_extraida_ml,
             duracion_seno_materno if tipo == "seno materno" else ""
         ]
-        sheet.append_row(fila)
-        st.success("Registro guardado con éxito.")
+    sheet.append_row(fila)
+    st.success("Registro guardado con éxito.")
 
 # 7. === PROCESAMIENTO Y CÁLCULO DE MÉTRICAS ===
 
