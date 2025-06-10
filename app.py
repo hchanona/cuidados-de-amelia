@@ -124,6 +124,13 @@ data["fecha"] = data["fecha_hora"].dt.date
 proteger_columna(data, "duracion_seno_materno")
 proteger_columna(data, "hubo_evacuación")
 
+columnas_a_limpiar = ["cantidad_leche_ml", "cantidad_popo_puenteada", "cantidad_extraida_de_leche", "duracion_seno_materno"]
+
+for col in columnas_a_limpiar:
+    data[col] = limpiar_y_convertir(data[col])
+
+data["tipo_leche"] = data["tipo_leche"].astype(str).str.strip().str.lower()
+
 # 5. === PRESENTACIÓN INICIAL DE LA APP ===
 
 # Genero una lista con los nombres de los jpg de las fotos
@@ -221,15 +228,6 @@ if st.button("Guardar"):
 
 hoy = ahora.date()
 datos_hoy = data[data["fecha"] == hoy]
-
-# Limpieza y conversión
-
-columnas_a_limpiar = ["cantidad_leche_ml", "cantidad_popo_puenteada", "cantidad_extraida_de_leche", "duracion_seno_materno"]
-
-for col in columnas_a_limpiar:
-    data[col] = limpiar_y_convertir(data[col])
-
-data["tipo_leche"] = data["tipo_leche"].astype(str).str.strip().str.lower()
     
 # === Última toma de leche (incluye seno materno) ===
 
@@ -241,17 +239,15 @@ texto_ultima_toma = tiempo_a_texto(minutos_desde_ultima_toma)
 # === Leche hoy (solo tipo "toma de leche") ===
 
 leche = datos_hoy[datos_hoy["tipo"] == "toma de leche"].copy()
-leche["tipo_leche"] = leche["tipo_leche"].astype(str).str.strip().str.lower()
 leche = leche[leche["tipo_leche"].isin(["materna", "nutramigen", "puramino"])]
 
 ml_24h = leche["cantidad_leche_ml"].sum()
 ml_materna = leche[leche["tipo_leche"] == "materna"]["cantidad_leche_ml"].sum()
 porcentaje_materna = (ml_materna / ml_24h * 100) if ml_24h > 0 else 0
 
-
 # Seno hoy
 seno_hoy = datos_hoy[datos_hoy["tipo"] == "seno materno"]
-duracion_total_seno_hoy = seno_hoy["duracion_seno_materno"].sum()
+duracion_total_seno_hoy = seno_hoy["duracion_seno_materno"].fillna(0).sum()
 leche["calorias"] = leche.apply(calcular_calorias, axis=1)
 calorias_24h = leche["calorias"].sum()
 
@@ -263,7 +259,7 @@ leche_diaria["acumulado"] = leche_diaria["cantidad_leche_ml"].cumsum()
 # Promedio histórico
 tomas_pasadas = data[
     (data["tipo"] == "toma de leche") &
-    (data["tipo_leche"].isin(["materna", "puramino"])) &
+    (data["tipo_leche"].isin(["materna", "puramino", "nutramigen"])) &
     (data["fecha"] < hoy)
 ]
 promedio_historico = tomas_pasadas.groupby("fecha")["cantidad_leche_ml"].sum().mean()
