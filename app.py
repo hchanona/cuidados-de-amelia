@@ -14,8 +14,8 @@ from oauth2client.service_account import ServiceAccountCredentials # Para la aut
 
 # 2. === DEFINICIÓN DE FUNCIONES ===
 
-# Calcular calorías
 def calcular_calorias(row):
+    """Devuelve las calorías correspondientes a la cantidad y tipo de leche de una fila."""
     if row["tipo_leche"] == "materna":
         return row["cantidad_leche_ml"] * 0.67
     elif row["tipo_leche"] == "puramino":
@@ -24,13 +24,14 @@ def calcular_calorias(row):
         return row["cantidad_leche_ml"] * 0.67
     return 0
 
-# Creamos función para calcular % materna por día
 def calcular_porcentaje_materna(grupo):
+    """Devuelve el porcentaje de leche materna en un grupo diario de tomas."""
     total = grupo["cantidad_leche_ml"].sum()
     materna = grupo[grupo["tipo_leche"] == "materna"]["cantidad_leche_ml"].sum()
     return (materna / total * 100) if total > 0 else 0
 
 def graficar_media_movil(serie, titulo, color, ylim_max=None):
+    """Grafica la media móvil de una serie diaria, suavizada a 7 días."""
     fig, ax = plt.subplots(figsize=(12,6))
     fig.patch.set_facecolor('#fff8f8')
     ax.set_facecolor('#fff8f8')
@@ -44,6 +45,33 @@ def graficar_media_movil(serie, titulo, color, ylim_max=None):
     fig.autofmt_xdate(rotation=30)
     st.subheader(titulo)
     st.pyplot(fig)
+
+def limpiar_y_convertir(serie):
+    """Convierte texto con posibles comas a número."""
+    return pd.to_numeric(serie.astype(str).str.replace(",", "."), errors="coerce")
+
+def proteger_columna(df, columna, valor_por_defecto=pd.NA):
+    """Añade la columna al DataFrame si no existe (rellena con valor por defecto)."""
+    if columna not in df.columns:
+        df[columna] = valor_por_defecto
+
+def tiempo_a_texto(tiempo):
+    """Convierte minutos o timedelta a texto 'X h Y min' para mostrar en la app."""
+    if tiempo is None:
+        return "No registrado"
+    
+    # Si es timedelta, convierto a minutos
+    if isinstance(tiempo, timedelta):
+        minutos = tiempo.total_seconds() / 60
+    else:
+        minutos = tiempo  # se asume que es ya minutos (float o int)
+    
+    # Evito valores negativos
+    minutos = max(minutos, 0)
+    
+    h = int(minutos // 60)
+    m = int(minutos % 60)
+    return f"{h} h {m} min"
 
 # 3. === CONFIGURACIÓN INICIAL Y CONEXIÓN A GOOGLE SHEETS ===
 
@@ -71,6 +99,9 @@ data["fecha_hora"] = pd.to_datetime(data["fecha"] + " " + data["hora"], errors="
 data = data.dropna(subset=["fecha_hora"])
 data["tipo_leche"] = data["tipo_leche"].astype(str).str.strip().str.lower()
 data = data[data["fecha_hora"] <= ahora]
+
+proteger_columna(data, "duracion_seno_materno")
+proteger_columna(data, "hubo_evacuación")
 
 # 5. === PRESENTACIÓN INICIAL DE LA APP ===
 
@@ -175,40 +206,19 @@ hoy = ahora.date()
 data["fecha"] = pd.to_datetime(data["fecha"], errors="coerce").dt.date
 datos_hoy = data[data["fecha"] == hoy]
 
-if "duracion_seno_materno" not in datos_hoy.columns:
-    datos_hoy["duracion_seno_materno"] = pd.NA
-
 # Limpieza y conversión
-data["cantidad_leche_ml"] = data["cantidad_leche_ml"].astype(str).str.replace(",", ".")
-data["cantidad_leche_ml"] = pd.to_numeric(data["cantidad_leche_ml"], errors="coerce")
 
-data["cantidad_popo_puenteada"] = data["cantidad_popo_puenteada"].astype(str).str.replace(",", ".")
-data["cantidad_popo_puenteada"] = pd.to_numeric(data["cantidad_popo_puenteada"], errors="coerce")
+columnas_a_limpiar = ["cantidad_leche_ml", "cantidad_popo_puenteada", "cantidad_extraida_de_leche", "duracion_seno_materno"]
 
-data["cantidad_extraida_de_leche"] = data["cantidad_extraida_de_leche"].astype(str).str.replace(",", ".")
-data["cantidad_extraida_de_leche"] = pd.to_numeric(data["cantidad_extraida_de_leche"], errors="coerce")
-
-# Protejo la variable duracion_seno_materno
-if "duracion_seno_materno" not in data.columns:
-    data["duracion_seno_materno"] = pd.NA
-
-data["duracion_seno_materno"] = pd.to_numeric(data["duracion_seno_materno"], errors="coerce")
-
+for col in columnas_a_limpiar:
+    data[col] = limpiar_y_convertir(data[col])
+    
 # === Última toma de leche (incluye seno materno) ===
 
 leche_historica = data[data["tipo"].isin(["toma de leche", "seno materno"])]
-
-if not leche_historica.empty:
-    ultima_toma_historica = leche_historica.sort_values("fecha_hora", ascending=False).iloc[0]
-    minutos_desde_ultima_toma = (ahora - ultima_toma_historica["fecha_hora"]).total_seconds() / 60
-    if minutos_desde_ultima_toma >= 0:
-        h_ultima_toma = int(minutos_desde_ultima_toma // 60)
-        m_ultima_toma = int(minutos_desde_ultima_toma % 60)
-        texto_ultima_toma = f"{h_ultima_toma} h {m_ultima_toma} min"
-    else:
-        texto_ultima_toma = "Registro futuro"
-else:
-    texto_ultima_toma = "No registrada"
+ultima_toma_historica = leche_historica.sort_values("fecha_hora", ascending=False).iloc[0]
+minutos_desde_ultima_toma = (ahora - ultima_toma_historica["fecha_hora"]).total_seconds() / 60
+texto_ultima_toma = tiempo_a_texto(minutos_desde_ultima_toma)
 
 # === Leche hoy (solo tipo "toma de leche") ===
 
@@ -222,22 +232,7 @@ porcentaje_materna = (ml_materna / ml_24h * 100) if ml_24h > 0 else 0
 
 # Seno hoy
 seno_hoy = datos_hoy[datos_hoy["tipo"] == "seno materno"]
-
 duracion_total_seno_hoy = seno_hoy["duracion_seno_materno"].sum()
-
-# Último seno materno
-if not seno_hoy.empty:
-    ultima_seno = seno_hoy.sort_values("fecha_hora", ascending=False).iloc[0]
-    minutos_desde_ultimo_seno = (ahora - ultima_seno["fecha_hora"]).total_seconds() / 60
-    if minutos_desde_ultimo_seno >= 0:
-        h_ultimo_seno = int(minutos_desde_ultimo_seno // 60)
-        m_ultimo_seno = int(minutos_desde_ultimo_seno % 60)
-        texto_ultimo_seno = f"{h_ultimo_seno} h {m_ultimo_seno} min"
-    else:
-        texto_ultimo_seno = "Registro futuro"
-else:
-    texto_ultimo_seno = "No registrado hoy"
-
 leche["calorias"] = leche.apply(calcular_calorias, axis=1)
 calorias_24h = leche["calorias"].sum()
 
@@ -252,7 +247,6 @@ tomas_pasadas = data[
     (data["tipo_leche"].isin(["materna", "puramino"])) &
     (data["fecha"] < hoy)
 ]
-tomas_pasadas["cantidad_leche_ml"] = pd.to_numeric(tomas_pasadas["cantidad_leche_ml"], errors="coerce")
 promedio_historico = tomas_pasadas.groupby("fecha")["cantidad_leche_ml"].sum().mean()
 
 # Otros eventos
@@ -283,14 +277,7 @@ tiempo_desde_cambio = ahora - ultima_colocacion if pd.notna(ultima_colocacion) e
 st.subheader("Indicadores de alimentación del día")
 
 st.metric("Tiempo desde última toma de leche, incluyendo seno", texto_ultima_toma)
-
-if tiempo_desde_extraccion is not None:
-    h = int(tiempo_desde_extraccion.total_seconds() // 3600)
-    m = int(tiempo_desde_extraccion.total_seconds() % 3600 // 60)
-    st.metric("Tiempo desde última extracción", f"{h} h {m} min")
-else:
-    st.info("Hoy no se ha extraído leche")
-
+st.metric("Tiempo desde última extracción", tiempo_a_texto(tiempo_desde_extraccion))
 st.metric("Leche consumida", f"{ml_24h:.0f} ml")
 st.metric("Leche extraída", f"{ml_extraido:.0f} ml")
 st.metric("Calorías consumidas", f"{calorias_24h:.0f} kcal")
@@ -304,18 +291,8 @@ st.subheader("Indicadores de digestión del día")
 st.metric("Número de puenteos", f"{len(puenteos)} veces")
 st.metric("Volumen puenteado", f"{puenteo_total:.0f} ml")
 st.metric("Número de evacuaciones", f"{n_evacuaciones} veces")
-
-if min_desde_vaciado is not None and min_desde_vaciado >= 0:
-    horas = int(min_desde_vaciado // 60)
-    minutos = int(min_desde_vaciado % 60)
-    st.metric("Tiempo desde último vaciamiento", f"{horas} h {minutos} min")
-elif min_desde_vaciado is not None:
-    st.warning("No puede registrarse un vaciamiento en el futuro.")
-
-if tiempo_desde_cambio is not None:
-    h = int(tiempo_desde_cambio.total_seconds() // 3600)
-    m = int(tiempo_desde_cambio.total_seconds() % 3600 // 60)
-    st.metric("Tiempo desde último cambio de bolsa", f"{h} h {m} min")
+st.metric("Tiempo desde último vaciamiento", tiempo_a_texto(min_desde_vaciado))
+st.metric("Tiempo desde último cambio de bolsa", tiempo_a_texto(tiempo_desde_cambio))
 
 # 8. === GRÁFICOS EXPLICATIVOS ===
 # Creo gráficos con una media móvil de 7 días, para que las curvas sean más lisas. Documento esto con un caption
