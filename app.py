@@ -228,6 +228,8 @@ columnas_a_limpiar = ["cantidad_leche_ml", "cantidad_popo_puenteada", "cantidad_
 
 for col in columnas_a_limpiar:
     data[col] = limpiar_y_convertir(data[col])
+
+data["tipo_leche"] = data["tipo_leche"].astype(str).str.strip().str.lower()
     
 # === Última toma de leche (incluye seno materno) ===
 
