@@ -94,7 +94,6 @@ data = pd.DataFrame(sheet.get_all_records())
 # Limpio los nombres de las columnas
 data.columns = data.columns.str.strip()
 
-data["hora"] = pd.to_datetime(data["hora"], errors="coerce")
 data["fecha_hora"] = pd.to_datetime(data["fecha"] + " " + data["hora"], errors="coerce")
 data = data.dropna(subset=["fecha_hora"])
 data["tipo_leche"] = data["tipo_leche"].astype(str).str.strip().str.lower()
