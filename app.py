@@ -203,7 +203,7 @@ if st.button("Guardar"):
 # 7. === PROCESAMIENTO Y CÁLCULO DE MÉTRICAS ===
 
 hoy = ahora.date()
-datos_hoy = data[data["fecha_hora"].dt.date == hoy]
+datos_hoy = data[data["fecha"] == hoy]
 
 # Limpieza y conversión
 
@@ -244,7 +244,7 @@ leche_diaria["acumulado"] = leche_diaria["cantidad_leche_ml"].cumsum()
 tomas_pasadas = data[
     (data["tipo"] == "toma de leche") &
     (data["tipo_leche"].isin(["materna", "puramino"])) &
-    (data["fecha_hora"].dt.date < hoy)
+    (data["fecha"] < hoy)
 ]
 promedio_historico = tomas_pasadas.groupby("fecha")["cantidad_leche_ml"].sum().mean()
 
