@@ -95,6 +95,7 @@ data = pd.DataFrame(sheet.get_all_records())
 data.columns = data.columns.str.strip()
 
 data["fecha_hora"] = pd.to_datetime(data["fecha"] + " " + data["hora"], errors="coerce")
+data["fecha"] = data["fecha_hora"].dt.date
 data = data.dropna(subset=["fecha_hora"])
 data["tipo_leche"] = data["tipo_leche"].astype(str).str.strip().str.lower()
 data = data[data["fecha_hora"] <= ahora]
@@ -202,7 +203,6 @@ if st.button("Guardar"):
 # 7. === PROCESAMIENTO Y CÁLCULO DE MÉTRICAS ===
 
 hoy = ahora.date()
-data["fecha_hora"].dt.date
 datos_hoy = data[data["fecha_hora"].dt.date == hoy]
 
 # Limpieza y conversión
@@ -244,7 +244,7 @@ leche_diaria["acumulado"] = leche_diaria["cantidad_leche_ml"].cumsum()
 tomas_pasadas = data[
     (data["tipo"] == "toma de leche") &
     (data["tipo_leche"].isin(["materna", "puramino"])) &
-    (data["fecha"] < hoy)
+    (data["fecha_hora"].dt.date < hoy)
 ]
 promedio_historico = tomas_pasadas.groupby("fecha")["cantidad_leche_ml"].sum().mean()
 
