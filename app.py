@@ -195,12 +195,12 @@ duracion_seno_materno = 0
 
 # Genero campos condicionales reactivos
 if tipo == "toma de leche":
-    cantidad_leche_oz = st.number_input("Cantidad de leche (oz)", min_value=0.0, step=0.1)
+    cantidad_leche_oz = st.number_input("Cantidad de leche (oz)", min_value=0.0, step=0.2)
     cantidad_leche_ml = (cantidad_leche_oz * 29.5735)
     tipo_leche = st.selectbox("Tipo de leche", ["materna", "Nutramigen", "Puramino"])
 
 elif tipo == "puenteo":
-    cantidad_popo_puenteada = st.number_input("Cantidad de popó puenteada (ml)", min_value=0, step=1)
+    cantidad_popo_puenteada = st.number_input("Volumen puenteado (ml)", min_value=0, step=1)
 
 elif tipo == "extracción de leche":
     cantidad_extraida_ml = st.number_input("Cantidad extraída de leche (ml)", min_value=0, step=1)
