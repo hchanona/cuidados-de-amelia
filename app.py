@@ -1,12 +1,53 @@
-import streamlit as st
-import pandas as pd
-import random
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
-from datetime import datetime, timedelta
-import json
+# 1. === IMPORTACIÓN DE MÓDULOS ===
 
-# Ajuste horario manual a CDMX
+import matplotlib.dates as mdates # Para manejar fechas
+import matplotlib.pyplot as plt # Para graficar
+import gspread # Para conectar con las hojas de cálculo de Google Sheets
+import json # Para manejar datos en formato JSON. En particular, leer credenciales
+import pandas as pd # Para manipular datos, en particular DataFrames
+import random # Para generar selecciones aleatorias. En particular, desplegar fotos al azar
+import streamlit as st # Para la interfaz web
+
+from datetime import datetime, timedelta # Para manejar fechas y horas
+from oauth2client.service_account import ServiceAccountCredentials # Para la autenticación con Google Sheets
+
+
+# 2. === DEFINICIÓN DE FUNCIONES ===
+
+# Calcular calorías
+def calcular_calorias(row):
+    if row["tipo_leche"] == "materna":
+        return row["cantidad_leche_ml"] * 0.67
+    elif row["tipo_leche"] == "puramino":
+        return row["cantidad_leche_ml"] * 0.72
+    elif row["tipo_leche"] == "nutramigen":
+        return row["cantidad_leche_ml"] * 0.67
+    return 0
+
+# Creamos función para calcular % materna por día
+def calcular_porcentaje_materna(grupo):
+    total = grupo["cantidad_leche_ml"].sum()
+    materna = grupo[grupo["tipo_leche"] == "materna"]["cantidad_leche_ml"].sum()
+    return (materna / total * 100) if total > 0 else 0
+
+def graficar_media_movil(serie, titulo, color, ylim_max=None):
+    fig, ax = plt.subplots(figsize=(12,6))
+    fig.patch.set_facecolor('#fff8f8')
+    ax.set_facecolor('#fff8f8')
+    ax.plot(serie.index, serie.values, linestyle='-', linewidth=3, color=color)
+    if ylim_max:
+        ax.set_ylim(0, ylim_max)
+    else:
+        ax.set_ylim(0, serie.max() * 1.10)
+    ax.xaxis.set_major_locator(mdates.AutoDateLocator())
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%d-%b'))
+    fig.autofmt_xdate(rotation=30)
+    st.subheader(titulo)
+    st.pyplot(fig)
+
+# 3. === CONFIGURACIÓN INICIAL Y CONEXIÓN A GOOGLE SHEETS ===
+
+# Ajusto manualmente el horario a Cdmx, que es UTC-6. UTC significa "tiempo universal coordinado".
 ahora = datetime.utcnow() - timedelta(hours=6)
 
 # Conexión a Google Sheets
@@ -17,15 +58,23 @@ creds = ServiceAccountCredentials.from_json_keyfile_dict(cred_dict, scope)
 client = gspread.authorize(creds)
 sheet = client.open_by_key("1LsuO8msQi9vXwNJq1L76fz_rTWJjtNLjecjaetdI8oY").sheet1
 
+# 4. === LIMPIEZA Y PREPROCESAMIENTO DE LOS DATOS ===
+
+# Convierto la hoja de Google Sheets en un DataFrame de pandas
 data = pd.DataFrame(sheet.get_all_records())
+
+# Limpio los nombres de las columnas
 data.columns = data.columns.str.strip()
 
-if not data.empty:
-    data["hora"] = pd.to_datetime(data["hora"], errors="coerce").dt.strftime("%H:%M")
-    data["fecha_hora"] = pd.to_datetime(data["fecha"] + " " + data["hora"], errors="coerce")
-    data = data.dropna(subset=["fecha_hora"])
-    data = data[data["fecha_hora"] <= ahora]
+data["hora"] = pd.to_datetime(data["hora"], errors="coerce")
+data["fecha_hora"] = pd.to_datetime(data["fecha"] + " " + data["hora"], errors="coerce")
+data = data.dropna(subset=["fecha_hora"])
+data["tipo_leche"] = data["tipo_leche"].astype(str).str.strip().str.lower()
+data = data[data["fecha_hora"] <= ahora]
 
+# 5. === PRESENTACIÓN INICIAL DE LA APP ===
+
+# Genero una lista con los nombres de los jpg de las fotos
 fotos_amelia = [
     "foto_amor1.jpg",
     "foto_amor2.jpg",
@@ -34,6 +83,7 @@ fotos_amelia = [
     "foto_amor5.jpg"
 ]
 
+# Elijo, de manera aleatoria, el nombre de una foto
 foto_elegida = random.choice(fotos_amelia)
 
 st.title("Registro de cuidados de Amelia")
@@ -63,9 +113,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# === FORMULARIO DE REGISTRO ===
-
-# === REGISTRO DE EVENTO ===
+# 6. === FORMULARIO DE REGISTRO ===
 
 st.header("Evento")
 
@@ -79,14 +127,14 @@ tipo = st.radio("Tipo de evento", [
     "colocación de bolsa", "extracción de leche", "evacuación", "puenteo", "toma de leche", "seno materno", "vaciado"
 ])
 
-# Inicializamos valores
+# Inicializo valores
 cantidad_leche_ml = 0.0
 tipo_leche = ""
 cantidad_popo_puenteada = 0
 cantidad_extraida_ml = 0
 duracion_seno_materno = 0
 
-# Campos condicionales reactivos
+# Genero campos condicionales reactivos
 if tipo == "toma de leche":
     cantidad_leche_oz = st.number_input("Cantidad de leche (oz)", min_value=0.0, step=0.1)
     cantidad_leche_ml = (cantidad_leche_oz * 29.5735)
@@ -101,7 +149,7 @@ elif tipo == "extracción de leche":
 elif tipo == "seno materno":
     duracion_seno_materno = st.number_input("Duración de seno materno (minutos)", min_value=0, step=1)
 
-# Botón de guardar (fuera de formulario)
+# Creo un botón para guardar los registros
 if st.button("Guardar"):
     fecha_hora_reg = datetime.combine(fecha, hora)
     if fecha_hora_reg > ahora:
@@ -121,7 +169,7 @@ if st.button("Guardar"):
         sheet.append_row(fila)
         st.success("Registro guardado con éxito.")
 
-# === Procesamiento de datos ===
+# 7. === PROCESAMIENTO Y CÁLCULO DE MÉTRICAS ===
 
 hoy = ahora.date()
 data["fecha"] = pd.to_datetime(data["fecha"], errors="coerce").dt.date
@@ -132,14 +180,15 @@ if "duracion_seno_materno" not in datos_hoy.columns:
 
 # Limpieza y conversión
 data["cantidad_leche_ml"] = data["cantidad_leche_ml"].astype(str).str.replace(",", ".")
-data["cantidad_popo_puenteada"] = data["cantidad_popo_puenteada"].astype(str).str.replace(",", ".")
-data["cantidad_extraida_de_leche"] = data["cantidad_extraida_de_leche"].astype(str).str.replace(",", ".")
-
 data["cantidad_leche_ml"] = pd.to_numeric(data["cantidad_leche_ml"], errors="coerce")
+
+data["cantidad_popo_puenteada"] = data["cantidad_popo_puenteada"].astype(str).str.replace(",", ".")
 data["cantidad_popo_puenteada"] = pd.to_numeric(data["cantidad_popo_puenteada"], errors="coerce")
+
+data["cantidad_extraida_de_leche"] = data["cantidad_extraida_de_leche"].astype(str).str.replace(",", ".")
 data["cantidad_extraida_de_leche"] = pd.to_numeric(data["cantidad_extraida_de_leche"], errors="coerce")
 
-# Protección para duracion_seno_materno
+# Protejo la variable duracion_seno_materno
 if "duracion_seno_materno" not in data.columns:
     data["duracion_seno_materno"] = pd.NA
 
@@ -157,15 +206,13 @@ if not leche_historica.empty:
         m_ultima_toma = int(minutos_desde_ultima_toma % 60)
         texto_ultima_toma = f"{h_ultima_toma} h {m_ultima_toma} min"
     else:
-        texto_ultima_toma = "⚠️ Registro futuro"
+        texto_ultima_toma = "Registro futuro"
 else:
     texto_ultima_toma = "No registrada"
 
 # === Leche hoy (solo tipo "toma de leche") ===
 
 leche = datos_hoy[datos_hoy["tipo"] == "toma de leche"]
-leche["cantidad_leche_ml"] = pd.to_numeric(leche["cantidad_leche_ml"], errors="coerce")
-leche["tipo_leche"] = leche["tipo_leche"].astype(str).str.strip().str.lower()
 leche = leche[leche["tipo_leche"].isin(["materna", "nutramigen", "puramino"])]
 
 ml_24h = leche["cantidad_leche_ml"].sum()
@@ -191,21 +238,11 @@ if not seno_hoy.empty:
 else:
     texto_ultimo_seno = "No registrado hoy"
 
-# Calorías
-def calcular_calorias(row):
-    if row["tipo_leche"] == "materna":
-        return row["cantidad_leche_ml"] * 0.67
-    elif row["tipo_leche"] == "puramino":
-        return row["cantidad_leche_ml"] * 0.72
-    elif row["tipo_leche"] == "nutramigen":
-        return row["cantidad_leche_ml"] * 0.67
-    return 0
-
 leche["calorias"] = leche.apply(calcular_calorias, axis=1)
 calorias_24h = leche["calorias"].sum()
 
 # Consumo acumulado de leche hoy
-leche_diaria = leche.dropna(subset=["fecha_hora", "cantidad_leche_ml"]).sort_values("fecha_hora")
+leche_diaria = leche.dropna(subset=["cantidad_leche_ml"]).sort_values("fecha_hora")
 leche_diaria["hora"] = leche_diaria["fecha_hora"].dt.strftime("%H:%M")
 leche_diaria["acumulado"] = leche_diaria["cantidad_leche_ml"].cumsum()
 
@@ -220,7 +257,6 @@ promedio_historico = tomas_pasadas.groupby("fecha")["cantidad_leche_ml"].sum().m
 
 # Otros eventos
 puenteos = datos_hoy[datos_hoy["tipo"] == "puenteo"]
-puenteos["cantidad_popo_puenteada"] = pd.to_numeric(puenteos["cantidad_popo_puenteada"], errors="coerce")
 puenteo_total = puenteos["cantidad_popo_puenteada"].sum()
 
 evacs = datos_hoy[(datos_hoy["tipo"] == "evacuación") & (datos_hoy["hubo_evacuación"] == "sí")]
@@ -229,7 +265,6 @@ n_evacuaciones = len(evacs)
 extracciones = datos_hoy[datos_hoy["tipo"] == "extracción de leche"]
 ultima_extraccion = extracciones["fecha_hora"].max()
 tiempo_desde_extraccion = ahora - ultima_extraccion if pd.notna(ultima_extraccion) else None
-extracciones["cantidad_extraida_de_leche"] = pd.to_numeric(extracciones["cantidad_extraida_de_leche"], errors="coerce")
 ml_extraido = extracciones["cantidad_extraida_de_leche"].sum()
 
 
@@ -241,7 +276,7 @@ cambios = data[(data["tipo"] == "colocación de bolsa") & (data["fecha_hora"] <=
 ultima_colocacion = cambios["fecha_hora"].max()
 tiempo_desde_cambio = ahora - ultima_colocacion if pd.notna(ultima_colocacion) else None
 
-# === Estadísticas finales ===
+# 7. === DESPLIEGUE DE LAS MÉTRICAS EN STREAMLIT ===
 
 # === Indicadores de alimentación ===
 
@@ -262,7 +297,7 @@ st.metric("Calorías consumidas", f"{calorias_24h:.0f} kcal")
 st.metric("Porcentaje de leche materna", f"{porcentaje_materna:.0f}%")
 st.metric("Duración de seno materno", f"{duracion_total_seno_hoy:.0f} min")
 
-# === Indicadores de digestión y manejo de bolsa ===
+# === Indicadores de digestión ===
 
 st.subheader("Indicadores de digestión del día")
 
@@ -282,112 +317,31 @@ if tiempo_desde_cambio is not None:
     m = int(tiempo_desde_cambio.total_seconds() % 3600 // 60)
     st.metric("Tiempo desde último cambio de bolsa", f"{h} h {m} min")
 
-
+# 8. === GRÁFICOS EXPLICATIVOS ===
+# Creo gráficos con una media móvil de 7 días, para que las curvas sean más lisas. Documento esto con un caption
 
 st.caption("Todas las gráficas a continuación presentan valores suavizados con media móvil de 7 días, para facilitar el seguimiento de tendencias.")
 
-# === Gráfico: Tendencia de consumo de calorías ===
-
-# Normalizamos primero los campos relevantes
-data["tipo_leche"] = data["tipo_leche"].astype(str).str.strip().str.lower()
-data["fecha"] = pd.to_datetime(data["fecha"], errors="coerce").dt.date
-data["cantidad_leche_ml"] = pd.to_numeric(data["cantidad_leche_ml"], errors="coerce")
-
-# Seleccionamos solo las tomas válidas
+# === Gráfico de consumo de calorías ===
 historico_leche = data[
     (data["tipo"] == "toma de leche") &
     (data["tipo_leche"].isin(["materna", "nutramigen", "puramino"]))
 ].copy()
-
-# Cálculo de calorías
-historico_leche["calorias"] = historico_leche.apply(lambda row: 
-    row["cantidad_leche_ml"] * (0.67 if row["tipo_leche"] == "materna" else 0.72), axis=1)
-
-# Agrupamos por fecha
+historico_leche["calorias"] = historico_leche.apply(calcular_calorias, axis=1)
 calorias_por_dia = historico_leche.groupby("fecha")["calorias"].sum().sort_index()
-
-# Calculamos media móvil de 7 días (puedes ajustar el window si quieres)
 media_movil = calorias_por_dia.rolling(window=7, min_periods=7).mean()
+graficar_media_movil(media_movil, "Calorías diarias", '#c8a2c8')
 
-# Gráfico
-st.subheader("Calorías diarias (kcal)")
 
-if not media_movil.empty:
-    import matplotlib.pyplot as plt
-    import matplotlib.dates as mdates
-    
-    fig, ax = plt.subplots(figsize=(12,6))
-    fig.patch.set_facecolor('#fff8f8')
-    ax.set_facecolor('#fff8f8')
-    ax.plot(media_movil.index, media_movil.values, linestyle='-', linewidth=3, color='#c8a2c8')
-    ax.set_ylim(0, media_movil.max() * 1.10)
-    
-    # Formato de fechas en X
-    ax.xaxis.set_major_locator(mdates.AutoDateLocator())
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%d-%b'))
-    fig.autofmt_xdate(rotation=30)
-    
-    st.pyplot(fig)
-
-# === Gráfico: Media móvil de 7 días de extracción de leche ===
-
-st.subheader("Extracción de leche (ml)")
-
-# Filtramos las extracciones válidas
+# === Gráfico de extracción de leche ===
 historico_extraccion = data[data["tipo"] == "extracción de leche"].copy()
-historico_extraccion["cantidad_extraida_de_leche"] = pd.to_numeric(historico_extraccion["cantidad_extraida_de_leche"], errors="coerce")
-
-# Agrupamos por día
 extraccion_por_dia = historico_extraccion.groupby("fecha")["cantidad_extraida_de_leche"].sum().sort_index()
-
-# Media móvil de 7 días
 extraccion_media_movil = extraccion_por_dia.rolling(window=7, min_periods=7).mean()
+graficar_media_movil(extraccion_media_movil, "Extracción de leche (ml)", '#f4c2c2', ylim_max=220)
 
-# Gráfico
-if not extraccion_media_movil.empty:
-    fig2, ax2 = plt.subplots(figsize=(12,6))
-    fig2.patch.set_facecolor('#fff8f8')
-    ax2.set_facecolor('#fff8f8')
-    ax2.plot(extraccion_media_movil.index, extraccion_media_movil.values, linestyle='-', linewidth=3, color='#f4c2c2')
-    ax2.set_ylim(0, 220)
-    ax2.xaxis.set_major_locator(mdates.AutoDateLocator())
-    ax2.xaxis.set_major_formatter(mdates.DateFormatter('%d-%b'))
-    fig2.autofmt_xdate(rotation=30)
-    st.pyplot(fig2)
-else:
-    st.info("No hay registros de extracción de leche.")
 
-# === Gráfico: Media móvil de 7 días del porcentaje de leche materna ===
-
-st.subheader("Porcentaje de leche materna")
-
-# Filtramos tomas válidas
+# === Gráfico de porcentaje de leche materna ===
 historico_tomas = data[data["tipo"] == "toma de leche"].copy()
-historico_tomas["cantidad_leche_ml"] = pd.to_numeric(historico_tomas["cantidad_leche_ml"], errors="coerce")
-historico_tomas["tipo_leche"] = historico_tomas["tipo_leche"].astype(str).str.strip().str.lower()
-
-# Creamos función para calcular % materna por día
-def calcular_porcentaje_materna(grupo):
-    total = grupo["cantidad_leche_ml"].sum()
-    materna = grupo[grupo["tipo_leche"] == "materna"]["cantidad_leche_ml"].sum()
-    return (materna / total * 100) if total > 0 else 0
-
-# Agrupamos por fecha
 porcentaje_materna_por_dia = historico_tomas.groupby("fecha").apply(calcular_porcentaje_materna).sort_index()
-
-# Media móvil de 7 días
 porcentaje_materna_media_movil = porcentaje_materna_por_dia.rolling(window=7, min_periods=7).mean()
-
-# Gráfico
-if not porcentaje_materna_media_movil.empty:
-    fig3, ax3 = plt.subplots(figsize=(12,6))
-    fig3.patch.set_facecolor('#fff8f8')
-    ax3.set_facecolor('#fff8f8')
-    ax3.plot(porcentaje_materna_media_movil.index, porcentaje_materna_media_movil.values, linestyle='-', linewidth=3, color='#e3a6b4')
-    ax3.set_ylim(0, 100)
-    ax3.xaxis.set_major_locator(mdates.AutoDateLocator())
-    ax3.xaxis.set_major_formatter(mdates.DateFormatter('%d-%b'))
-    fig3.autofmt_xdate(rotation=30)
-    st.pyplot(fig3)
-else:
-    st.info("No hay registros de tomas de leche.")
+graficar_media_movil(porcentaje_materna_media_movil, "Porcentaje de leche materna", '#e3a6b4', ylim_max=100)
