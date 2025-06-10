@@ -1,6 +1,6 @@
 # Cuidados de Amelia
 
-Creé esta app con Streamlit para registrar los cuidados de mi bebé prematura, y visualizar históricos en tiempo real. 
+Creé esta app con Streamlit para registrar los cuidados de mi bebé prematura y visualizar sus métricas e históricos en tiempo real.
 
 ## Cómo puedes usar esta app
 
