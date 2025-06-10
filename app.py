@@ -94,13 +94,11 @@ data = pd.DataFrame(sheet.get_all_records())
 # Limpio los nombres de las columnas
 data.columns = data.columns.str.strip()
 
-data["fecha"] = pd.to_datetime(data["fecha"], errors="coerce").dt.date
 data["hora"] = data["hora"].astype(str).str.strip()
 data.loc[data["hora"] == "", "hora"] = "00:00"
-data["fecha_hora"] = pd.to_datetime(data["fecha"].astype(str) + " " + data["hora"], errors="coerce")
-
+data["fecha_hora"] = pd.to_datetime(data["fecha"].astype(str).str.strip() + " " + data["hora"], errors="coerce")
+data["fecha"] = data["fecha_hora"].dt.date
 data = data.dropna(subset=["fecha_hora"])
-data["tipo_leche"] = data["tipo_leche"].astype(str).str.strip().str.lower()
 data = data[data["fecha_hora"] <= ahora]
 
 proteger_columna(data, "duracion_seno_materno")
