@@ -240,7 +240,8 @@ texto_ultima_toma = tiempo_a_texto(minutos_desde_ultima_toma)
 
 # === Leche hoy (solo tipo "toma de leche") ===
 
-leche = datos_hoy[datos_hoy["tipo"] == "toma de leche"]
+leche = datos_hoy[datos_hoy["tipo"] == "toma de leche"].copy()
+leche["tipo_leche"] = leche["tipo_leche"].astype(str).str.strip().str.lower()
 leche = leche[leche["tipo_leche"].isin(["materna", "nutramigen", "puramino"])]
 
 ml_24h = leche["cantidad_leche_ml"].sum()
