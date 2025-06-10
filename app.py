@@ -202,8 +202,8 @@ if st.button("Guardar"):
 # 7. === PROCESAMIENTO Y CÁLCULO DE MÉTRICAS ===
 
 hoy = ahora.date()
-data["fecha"] = pd.to_datetime(data["fecha"], errors="coerce").dt.date
-datos_hoy = data[data["fecha"] == hoy]
+data["fecha_hora"].dt.date
+datos_hoy = data[data["fecha_hora"].dt.date == hoy]
 
 # Limpieza y conversión
 
