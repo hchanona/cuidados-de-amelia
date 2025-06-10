@@ -30,6 +30,29 @@ def calcular_porcentaje_materna(grupo):
     materna = grupo[grupo["tipo_leche"] == "materna"]["cantidad_leche_ml"].sum()
     return (materna / total * 100) if total > 0 else 0
 
+def convertir_hora(h):
+    """
+    Convierte un valor de hora a formato 'HH:MM', robusto a entradas como texto, float o timestamp.
+    """
+    if pd.isna(h):
+        return "00:00"
+    
+    if isinstance(h, (float, int)):
+        total_minutes = h * 24 * 60
+        hours = int(total_minutes // 60)
+        minutes = int(total_minutes % 60)
+        return f"{hours:02d}:{minutes:02d}"
+    
+    h_str = str(h).strip()
+    if h_str == "":
+        return "00:00"
+    
+    parts = h_str.split(":")
+    if len(parts) >= 2:
+        return f"{int(parts[0]):02d}:{int(parts[1]):02d}"
+    else:
+        return "00:00"
+
 def graficar_media_movil(serie, titulo, color, ylim_max=None):
     """Grafica la media móvil de una serie diaria, suavizada a 7 días."""
     fig, ax = plt.subplots(figsize=(12,6))
@@ -94,12 +117,9 @@ data = pd.DataFrame(sheet.get_all_records())
 # Limpio los nombres de las columnas
 data.columns = data.columns.str.strip()
 
-data["hora"] = data["hora"].astype(str).str.strip()
-data.loc[data["hora"] == "", "hora"] = "00:00"
+data["hora"] = data["hora"].apply(convertir_hora)
 data["fecha_hora"] = pd.to_datetime(data["fecha"].astype(str).str.strip() + " " + data["hora"], errors="coerce")
 data["fecha"] = data["fecha_hora"].dt.date
-data = data.dropna(subset=["fecha_hora"])
-data = data[data["fecha_hora"] <= ahora]
 
 proteger_columna(data, "duracion_seno_materno")
 proteger_columna(data, "hubo_evacuación")
