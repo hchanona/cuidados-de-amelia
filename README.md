@@ -16,6 +16,10 @@ Tu app quedará publicada en una URL como: `https://tuusuario.streamlit.app`
 
 - Formulario para registrar cuidados, con campos adaptativos según el tipo de evento (toma de leche, puenteo, extracción, seno materno, etc.)
 - Tablero con las últimas métricas, actualizado en tiempo real:
-- Alimentación: volumen de leche consumida, calorías, porcentaje de leche materna, duración de seno materno, etc.
-- Digestión: volumen puenteado, evacuaciones, tiempos desde último cambio y vaciamiento.
-- Gráficos históricos con media móvil para visualizar tendencias (consumo de calorías, extracción de leche, porcentaje de leche materna).
+  
+  * Alimentación: volumen de leche consumida, calorías, porcentaje de leche materna, duración de seno materno, etc.
+  
+  * Digestión: volumen puenteado, evacuaciones, tiempos desde último cambio y vaciamiento.
+  
+- Gráficos históricos con media móvil para visualizar tendencias (consumo de calorías y extracción de leche).
+
