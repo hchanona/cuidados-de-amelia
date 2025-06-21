@@ -189,7 +189,7 @@ st.header("Evento")
 
 fecha = ahora.date()
 hora = ahora.time()
-hora_str = ahora.strftime('%H:%M')
+hora_str = hora.strftime('%H:%M')
 
 st.info(f"El registro se guardará automáticamente con la fecha {fecha} y la hora actual {hora_str}.")
 
