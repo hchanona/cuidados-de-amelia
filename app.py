@@ -187,6 +187,7 @@ st.markdown(
 
 st.header("Evento")
 
+fecha = ahora.date()
 hora = ahora.time()
 hora_str = ahora.strftime('%H:%M')
 
