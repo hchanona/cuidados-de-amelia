@@ -187,10 +187,10 @@ st.markdown(
 
 st.header("Evento")
 
-fecha = ahora.date()
 hora = ahora.time()
+hora_str = ahora.strftime('%H:%M')
 
-st.info(f"El registro se guardará automáticamente con la fecha {fecha} y la hora actual {hora.strftime('%H:%M')}.")
+st.info(f"El registro se guardará automáticamente con la fecha {fecha} y la hora actual {hora_str}.")
 
 
 tipo = st.radio("Tipo de evento", [
@@ -223,7 +223,7 @@ elif tipo == "seno materno":
 if st.button("Guardar"):
     fecha_hora_reg = datetime.combine(fecha, hora)
     fila = [str(fecha),
-            str(hora),
+            hora_str,
             tipo,
             cantidad_leche_ml,
             tipo_leche,
