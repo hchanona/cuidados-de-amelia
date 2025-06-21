@@ -32,26 +32,37 @@ def calcular_porcentaje_materna(grupo):
 
 def convertir_hora(h):
     """
-    Convierte un valor de hora a formato 'HH:MM', robusto a entradas como texto, float o timestamp.
+    Convierte un valor de hora a formato 'HH:MM', robusto a entradas como texto, float, timestamp o con segundos.
     """
     if pd.isna(h):
         return "00:00"
     
-    if isinstance(h, (float, int)):
-        total_minutes = h * 24 * 60
-        hours = int(total_minutes // 60)
-        minutes = int(total_minutes % 60)
-        return f"{hours:02d}:{minutes:02d}"
-    
-    h_str = str(h).strip()
-    if h_str == "":
-        return "00:00"
-    
-    parts = h_str.split(":")
-    if len(parts) >= 2:
-        return f"{int(parts[0]):02d}:{int(parts[1]):02d}"
-    else:
-        return "00:00"
+    try:
+        # Si ya es datetime.time
+        if isinstance(h, datetime):
+            return h.strftime("%H:%M")
+        
+        h_str = str(h).strip()
+
+        # Caso típico con segundos y microsegundos
+        if ":" in h_str:
+            try:
+                dt = pd.to_datetime(h_str, errors="coerce")
+                return dt.strftime("%H:%M")
+            except:
+                pass
+        
+        # Caso numérico tipo Excel
+        if isinstance(h, (int, float)):
+            total_minutes = h * 24 * 60
+            hours = int(total_minutes // 60)
+            minutes = int(total_minutes % 60)
+            return f"{hours:02d}:{minutes:02d}"
+        
+    except:
+        pass
+
+    return "00:00"
 
 def graficar_media_movil(serie, titulo, color, ylim_max=None):
     """Grafica la media móvil de una serie diaria, suavizada a 7 días."""
