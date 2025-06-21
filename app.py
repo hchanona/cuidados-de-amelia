@@ -110,7 +110,7 @@ def tiempo_a_texto(tiempo):
 # 3. === CONFIGURACIÓN INICIAL Y CONEXIÓN A GOOGLE SHEETS ===
 
 # Ajusto manualmente el horario a Cdmx, que es UTC-6. UTC significa "tiempo universal coordinado".
-ahora = datetime.utcnow() - timedelta(hours=6)
+ahora = datetime.utcnow()
 
 # Conexión a Google Sheets
 cred_json = st.secrets["GOOGLE_SHEETS_CREDENTIALS"]
