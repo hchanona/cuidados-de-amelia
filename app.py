@@ -2,6 +2,7 @@
 
 import matplotlib.dates as mdates # Para manejar fechas
 import matplotlib.pyplot as plt # Para graficar
+import pytz
 import gspread # Para conectar con las hojas de cálculo de Google Sheets
 import json # Para manejar datos en formato JSON. En particular, leer credenciales
 import pandas as pd # Para manipular datos, en particular DataFrames
@@ -110,7 +111,8 @@ def tiempo_a_texto(tiempo):
 # 3. === CONFIGURACIÓN INICIAL Y CONEXIÓN A GOOGLE SHEETS ===
 
 # Ajusto manualmente el horario a Cdmx, que es UTC-6. UTC significa "tiempo universal coordinado".
-ahora = datetime.utcnow() - timedelta(hours=6)
+cdmx = pytz.timezone("America/Mexico_City")
+ahora = datetime.utcnow().replace(tzinfo=pytz.utc).astimezone(cdmx)
 
 # Conexión a Google Sheets
 cred_json = st.secrets["GOOGLE_SHEETS_CREDENTIALS"]
@@ -130,6 +132,7 @@ data.columns = data.columns.str.strip()
 
 data["hora"] = data["hora"].apply(convertir_hora)
 data["fecha_hora"] = pd.to_datetime(data["fecha"].astype(str).str.strip() + " " + data["hora"], errors="coerce")
+data["fecha_hora"] = data["fecha_hora"].dt.tz_localize(cdmx)
 data["fecha"] = data["fecha_hora"].dt.date
 
 proteger_columna(data, "duracion_seno_materno")
