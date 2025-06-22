@@ -220,12 +220,6 @@ datos_hoy = data[data["fecha"] == hoy]
 
 leche_historica = data[data["tipo"].isin(["toma de leche", "seno materno"])]
 ultima_toma_historica = leche_historica.sort_values("fecha_hora", ascending=False).iloc[0]
-
-st.write("🕒 ahora (tiempo actual):", ahora)
-st.write("🍼 fecha_hora de la última toma:", ultima_toma_historica["fecha_hora"])
-st.write("⏱️ diferencia:", ahora - ultima_toma_historica["fecha_hora"])
-
-
 minutos_desde_ultima_toma = (ahora - ultima_toma_historica["fecha_hora"]).total_seconds() / 60
 texto_ultima_toma = tiempo_a_texto(minutos_desde_ultima_toma)
 
