@@ -98,12 +98,19 @@ data = pd.DataFrame(sheet.get_all_records())
 # Limpio los nombres de las columnas
 data.columns = data.columns.str.strip()
 
+# Corrijo el formato de hora si no tiene segundos
+data["hora"] = data["hora"].astype(str).str.strip().apply(
+    lambda x: x if len(x.split(":")) == 3 else x + ":00"
+)
+
+# Convierto a datetime con timezone awareness
 data["fecha_hora"] = pd.to_datetime(
     data["fecha"].astype(str).str.strip() + " " + data["hora"],
     errors="coerce",
     utc=True
 ).dt.tz_convert(cdmx)
 
+# Extraigo fecha y hora formateada
 data["fecha"] = data["fecha_hora"].dt.date
 data["hora"] = data["fecha_hora"].dt.strftime("%H:%M")
 
