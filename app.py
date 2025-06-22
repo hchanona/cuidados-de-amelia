@@ -105,10 +105,10 @@ data["hora"] = data["hora"].astype(str).str.strip().apply(
 
 # Convierto a datetime con timezone awareness
 data["fecha_hora"] = pd.to_datetime(
-    data["fecha"].astype(str).str.strip() + " " + data["hora"],
-    errors="coerce",
-    utc=True
-).dt.tz_convert(cdmx)
+    data["fecha"].astype(str).str.strip() + " " + data["hora"].astype(str).str.strip(),
+    format="%Y-%m-%d %H:%M:%S",
+    errors="coerce"
+).dt.tz_localize(cdmx, ambiguous="NaT")
 
 # Extraigo fecha y hora formateada
 data["fecha"] = data["fecha_hora"].dt.date
