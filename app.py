@@ -182,7 +182,7 @@ st.markdown(
 st.header("Evento")
 
 fecha = ahora.date()
-hora = ahora.time().replace(second=0, microsecond=0
+hora = ahora.time().replace(second=0, microsecond=0)
 hora_str = hora.strftime('%H:%M')
 
 st.info(f"El registro se guardará automáticamente con la fecha {fecha} y la hora actual {hora_str}.")
