@@ -102,6 +102,8 @@ def tiempo_a_texto(tiempo):
 # Ajusto manualmente el horario a Cdmx, que es UTC-6. UTC significa "tiempo universal coordinado".
 cdmx = pytz.timezone("America/Mexico_City")
 ahora = datetime.utcnow().replace(tzinfo=pytz.utc).astimezone(cdmx)
+ahora = ahora.replace(second=0, microsecond=0)
+
 
 # Conexión a Google Sheets
 cred_json = st.secrets["GOOGLE_SHEETS_CREDENTIALS"]
@@ -180,7 +182,7 @@ st.markdown(
 st.header("Evento")
 
 fecha = ahora.date()
-hora = ahora.time()
+hora = ahora.time().replace(second=0, microsecond=0
 hora_str = hora.strftime('%H:%M')
 
 st.info(f"El registro se guardará automáticamente con la fecha {fecha} y la hora actual {hora_str}.")
