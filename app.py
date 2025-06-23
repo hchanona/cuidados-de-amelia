@@ -132,7 +132,8 @@ fotos_amelia = [
     "foto_amor2.jpg",
     "foto_amor3.jpg",
     "foto_amor4.jpg",
-    "foto_amor5.jpg"
+    "foto_amor5.jpg",
+    "foto_amor6.jpg"
 ]
 
 # Elijo, de manera aleatoria, el nombre de una foto
