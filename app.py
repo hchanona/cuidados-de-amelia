@@ -324,7 +324,7 @@ graficar_media_movil(media_movil, "Calorías diarias", '#c8a2c8')
 historico_extraccion = data[data["tipo"] == "extracción de leche"].copy()
 extraccion_por_dia = historico_extraccion.groupby("fecha")["cantidad_extraida_de_leche"].sum().sort_index()
 extraccion_media_movil = extraccion_por_dia.rolling(window=1, min_periods=1).mean()
-graficar_media_movil(extraccion_media_movil, "Extracción de leche (ml)", '#f4c2c2', ylim_max=220)
+graficar_media_movil(extraccion_media_movil, "Extracción de leche (ml)", '#f4c2c2', ylim_max=300)
 
 
 # === Gráfico de porcentaje de leche materna ===
