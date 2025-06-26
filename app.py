@@ -316,19 +316,19 @@ historico_leche = data[
 ].copy()
 historico_leche["calorias"] = historico_leche.apply(calcular_calorias, axis=1)
 calorias_por_dia = historico_leche.groupby("fecha")["calorias"].sum().sort_index()
-media_movil = calorias_por_dia.rolling(window=1, min_periods=1).mean()
+media_movil = calorias_por_dia.rolling(window=7, min_periods=7).mean()
 graficar_media_movil(media_movil, "Calorías diarias", '#c8a2c8')
 
 
 # === Gráfico de extracción de leche ===
 historico_extraccion = data[data["tipo"] == "extracción de leche"].copy()
 extraccion_por_dia = historico_extraccion.groupby("fecha")["cantidad_extraida_de_leche"].sum().sort_index()
-extraccion_media_movil = extraccion_por_dia.rolling(window=1, min_periods=1).mean()
+extraccion_media_movil = extraccion_por_dia.rolling(window=7, min_periods=7).mean()
 graficar_media_movil(extraccion_media_movil, "Extracción de leche (ml)", '#f4c2c2', ylim_max=300)
 
 
 # === Gráfico de porcentaje de leche materna ===
 historico_tomas = data[data["tipo"] == "toma de leche"].copy()
 porcentaje_materna_por_dia = historico_tomas.groupby("fecha").apply(calcular_porcentaje_materna).sort_index()
-porcentaje_materna_media_movil = porcentaje_materna_por_dia.rolling(window=1, min_periods=1).mean()
+porcentaje_materna_media_movil = porcentaje_materna_por_dia.rolling(window=7, min_periods=7).mean()
 graficar_media_movil(porcentaje_materna_media_movil, "Porcentaje de leche materna", '#e3a6b4', ylim_max=100)
